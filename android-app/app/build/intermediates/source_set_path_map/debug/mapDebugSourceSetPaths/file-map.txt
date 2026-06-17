@@ -1,0 +1,68 @@
+com.grandtips.motoposmobile.app-material-ripple-release-0 C:\Users\grlds\.gradle\caches\9.3.0\transforms\095864bdfd0055d522bdf94160fc26cd\workspace\transformed\material-ripple-release\res
+com.grandtips.motoposmobile.app-coil-base-2.7.0-1 C:\Users\grlds\.gradle\caches\9.3.0\transforms\0a9cfc04423d51c6602ae264c218cfb0\workspace\transformed\coil-base-2.7.0\res
+com.grandtips.motoposmobile.app-core-1.13.1-2 C:\Users\grlds\.gradle\caches\9.3.0\transforms\0bf0adb1641d10ddc7ea291e50c9e3cb\workspace\transformed\core-1.13.1\res
+com.grandtips.motoposmobile.app-activity-ktx-1.9.1-3 C:\Users\grlds\.gradle\caches\9.3.0\transforms\0d965338b752401a3cb1525f1fc7ca1b\workspace\transformed\activity-ktx-1.9.1\res
+com.grandtips.motoposmobile.app-camera-camera2-1.3.4-4 C:\Users\grlds\.gradle\caches\9.3.0\transforms\0f6bfacfb29d4dd1fd6fcf5a5cfdfd9d\workspace\transformed\camera-camera2-1.3.4\res
+com.grandtips.motoposmobile.app-play-services-base-18.1.0-5 C:\Users\grlds\.gradle\caches\9.3.0\transforms\118f7d2a39dab192428d8f9a11eb7cc2\workspace\transformed\play-services-base-18.1.0\res
+com.grandtips.motoposmobile.app-play-services-basement-18.1.0-6 C:\Users\grlds\.gradle\caches\9.3.0\transforms\14592816334ba580aacb4c3fb31ba32e\workspace\transformed\play-services-basement-18.1.0\res
+com.grandtips.motoposmobile.app-material-icons-core-release-7 C:\Users\grlds\.gradle\caches\9.3.0\transforms\1476372b4ef27d0e0797b4916f644b7f\workspace\transformed\material-icons-core-release\res
+com.grandtips.motoposmobile.app-annotation-experimental-1.4.0-8 C:\Users\grlds\.gradle\caches\9.3.0\transforms\189d2f1956933eca0960bfab2c65b59e\workspace\transformed\annotation-experimental-1.4.0\res
+com.grandtips.motoposmobile.app-navigation-common-2.7.7-9 C:\Users\grlds\.gradle\caches\9.3.0\transforms\1a042af1d7b45a973e369075d08e76c3\workspace\transformed\navigation-common-2.7.7\res
+com.grandtips.motoposmobile.app-animation-core-release-10 C:\Users\grlds\.gradle\caches\9.3.0\transforms\2006388153e40308d924973943c76865\workspace\transformed\animation-core-release\res
+com.grandtips.motoposmobile.app-core-runtime-2.2.0-11 C:\Users\grlds\.gradle\caches\9.3.0\transforms\34459fb55c051d1a802fb09206da7077\workspace\transformed\core-runtime-2.2.0\res
+com.grandtips.motoposmobile.app-emoji2-1.3.0-12 C:\Users\grlds\.gradle\caches\9.3.0\transforms\38abf0243c4381cc755032e5dbfeaff4\workspace\transformed\emoji2-1.3.0\res
+com.grandtips.motoposmobile.app-ui-text-release-13 C:\Users\grlds\.gradle\caches\9.3.0\transforms\3a144eaf0e35904f09d23b2df49ad892\workspace\transformed\ui-text-release\res
+com.grandtips.motoposmobile.app-appcompat-1.6.1-14 C:\Users\grlds\.gradle\caches\9.3.0\transforms\3be66d81fe8b836c06b92b5bbbd42620\workspace\transformed\appcompat-1.6.1\res
+com.grandtips.motoposmobile.app-startup-runtime-1.1.1-15 C:\Users\grlds\.gradle\caches\9.3.0\transforms\4775eba65f5257182f812a2b069ec900\workspace\transformed\startup-runtime-1.1.1\res
+com.grandtips.motoposmobile.app-emoji2-views-helper-1.3.0-16 C:\Users\grlds\.gradle\caches\9.3.0\transforms\4c5dfd14182f7a100cfbf2e484eb1716\workspace\transformed\emoji2-views-helper-1.3.0\res
+com.grandtips.motoposmobile.app-customview-poolingcontainer-1.0.0-17 C:\Users\grlds\.gradle\caches\9.3.0\transforms\541ef8889640489ee3f4bd72c5eb7d94\workspace\transformed\customview-poolingcontainer-1.0.0\res
+com.grandtips.motoposmobile.app-lifecycle-runtime-release-18 C:\Users\grlds\.gradle\caches\9.3.0\transforms\592025129142af641a1c74f8e480a10e\workspace\transformed\lifecycle-runtime-release\res
+com.grandtips.motoposmobile.app-savedstate-ktx-1.2.1-19 C:\Users\grlds\.gradle\caches\9.3.0\transforms\5e4778fd3b13f12c29a6ddfb6fc0e2ab\workspace\transformed\savedstate-ktx-1.2.1\res
+com.grandtips.motoposmobile.app-activity-compose-1.9.1-20 C:\Users\grlds\.gradle\caches\9.3.0\transforms\5e6b91efe3888a5c56bd1eb277b210d5\workspace\transformed\activity-compose-1.9.1\res
+com.grandtips.motoposmobile.app-ui-geometry-release-21 C:\Users\grlds\.gradle\caches\9.3.0\transforms\613bca87eeb6e3cbd54944e66cb2ac9b\workspace\transformed\ui-geometry-release\res
+com.grandtips.motoposmobile.app-lifecycle-process-2.8.3-22 C:\Users\grlds\.gradle\caches\9.3.0\transforms\6543b2dcc194f81e5a69ab1372fc9b86\workspace\transformed\lifecycle-process-2.8.3\res
+com.grandtips.motoposmobile.app-camera-view-1.3.4-23 C:\Users\grlds\.gradle\caches\9.3.0\transforms\65838bf5abfd92e3e85ce9a17615e41d\workspace\transformed\camera-view-1.3.4\res
+com.grandtips.motoposmobile.app-camera-video-1.3.4-24 C:\Users\grlds\.gradle\caches\9.3.0\transforms\68e02fd36eaf0d8e0350fee1a2786a5b\workspace\transformed\camera-video-1.3.4\res
+com.grandtips.motoposmobile.app-savedstate-1.2.1-25 C:\Users\grlds\.gradle\caches\9.3.0\transforms\6d349e98f5c377fd7944588fa8804631\workspace\transformed\savedstate-1.2.1\res
+com.grandtips.motoposmobile.app-animation-release-26 C:\Users\grlds\.gradle\caches\9.3.0\transforms\6f4a0035acb0ad37f2944ceb8b261c23\workspace\transformed\animation-release\res
+com.grandtips.motoposmobile.app-lifecycle-viewmodel-ktx-2.8.3-27 C:\Users\grlds\.gradle\caches\9.3.0\transforms\70fa01b94d792f5ff6faf90bf39f86d0\workspace\transformed\lifecycle-viewmodel-ktx-2.8.3\res
+com.grandtips.motoposmobile.app-appcompat-resources-1.6.1-28 C:\Users\grlds\.gradle\caches\9.3.0\transforms\77b6b6d054f8b925ffe3e12a2082ebf7\workspace\transformed\appcompat-resources-1.6.1\res
+com.grandtips.motoposmobile.app-runtime-release-29 C:\Users\grlds\.gradle\caches\9.3.0\transforms\7c154cf68ab5e8a50c729a4d8d712aa3\workspace\transformed\runtime-release\res
+com.grandtips.motoposmobile.app-camera-core-1.3.4-30 C:\Users\grlds\.gradle\caches\9.3.0\transforms\7ee428940303ed918d7aa85ef498804e\workspace\transformed\camera-core-1.3.4\res
+com.grandtips.motoposmobile.app-ui-graphics-release-31 C:\Users\grlds\.gradle\caches\9.3.0\transforms\8a91bef165d26359c45bd287e75b482f\workspace\transformed\ui-graphics-release\res
+com.grandtips.motoposmobile.app-foundation-layout-release-32 C:\Users\grlds\.gradle\caches\9.3.0\transforms\8ef3b4aa27096c3da27624cd9b5759fc\workspace\transformed\foundation-layout-release\res
+com.grandtips.motoposmobile.app-lifecycle-livedata-core-2.8.3-33 C:\Users\grlds\.gradle\caches\9.3.0\transforms\90d10975710dabbe020c3d6ecfaf0f37\workspace\transformed\lifecycle-livedata-core-2.8.3\res
+com.grandtips.motoposmobile.app-fragment-1.3.6-34 C:\Users\grlds\.gradle\caches\9.3.0\transforms\93a0cd0dd9795cffa303b0e8fc47b3b7\workspace\transformed\fragment-1.3.6\res
+com.grandtips.motoposmobile.app-ui-tooling-preview-release-35 C:\Users\grlds\.gradle\caches\9.3.0\transforms\944a2459d284b8e27b2ec85352638af7\workspace\transformed\ui-tooling-preview-release\res
+com.grandtips.motoposmobile.app-foundation-release-36 C:\Users\grlds\.gradle\caches\9.3.0\transforms\954dd15166ffed3be2020036a98deeb3\workspace\transformed\foundation-release\res
+com.grandtips.motoposmobile.app-ui-unit-release-37 C:\Users\grlds\.gradle\caches\9.3.0\transforms\956e4980258464f8010b66d68edb4cbd\workspace\transformed\ui-unit-release\res
+com.grandtips.motoposmobile.app-ui-tooling-data-release-38 C:\Users\grlds\.gradle\caches\9.3.0\transforms\98cb822c06315fd34557585b61a3f57a\workspace\transformed\ui-tooling-data-release\res
+com.grandtips.motoposmobile.app-navigation-runtime-2.7.7-39 C:\Users\grlds\.gradle\caches\9.3.0\transforms\9df50e6f253396e0b374e6c30acb3f12\workspace\transformed\navigation-runtime-2.7.7\res
+com.grandtips.motoposmobile.app-navigation-common-ktx-2.7.7-40 C:\Users\grlds\.gradle\caches\9.3.0\transforms\9f81b0595e80c57dac6f30b2f61b42ea\workspace\transformed\navigation-common-ktx-2.7.7\res
+com.grandtips.motoposmobile.app-runtime-saveable-release-41 C:\Users\grlds\.gradle\caches\9.3.0\transforms\a53e3daa51da1c71ef938643a5a88789\workspace\transformed\runtime-saveable-release\res
+com.grandtips.motoposmobile.app-activity-1.9.1-42 C:\Users\grlds\.gradle\caches\9.3.0\transforms\aae8535c73d709e386bebdbe6c353b64\workspace\transformed\activity-1.9.1\res
+com.grandtips.motoposmobile.app-ui-release-43 C:\Users\grlds\.gradle\caches\9.3.0\transforms\bf6c971b243488cee8b091f3864d1af0\workspace\transformed\ui-release\res
+com.grandtips.motoposmobile.app-ui-util-release-44 C:\Users\grlds\.gradle\caches\9.3.0\transforms\c3af9be3d50ee605aa84dd3578b8dfae\workspace\transformed\ui-util-release\res
+com.grandtips.motoposmobile.app-lifecycle-livedata-core-ktx-2.8.3-45 C:\Users\grlds\.gradle\caches\9.3.0\transforms\c90cec1d25a5975587af2ff9885c8d49\workspace\transformed\lifecycle-livedata-core-ktx-2.8.3\res
+com.grandtips.motoposmobile.app-camera-lifecycle-1.3.4-46 C:\Users\grlds\.gradle\caches\9.3.0\transforms\cdefe53d113b1e2257c16519c577df23\workspace\transformed\camera-lifecycle-1.3.4\res
+com.grandtips.motoposmobile.app-core-ktx-1.13.1-47 C:\Users\grlds\.gradle\caches\9.3.0\transforms\cf1294dca389122df7d44d974cb30f0c\workspace\transformed\core-ktx-1.13.1\res
+com.grandtips.motoposmobile.app-material-release-48 C:\Users\grlds\.gradle\caches\9.3.0\transforms\d180fb0c2140cc404bc0e41772e12321\workspace\transformed\material-release\res
+com.grandtips.motoposmobile.app-lifecycle-livedata-2.8.3-49 C:\Users\grlds\.gradle\caches\9.3.0\transforms\d236de4e4512e7c6b5e5e4aa74f3f5ba\workspace\transformed\lifecycle-livedata-2.8.3\res
+com.grandtips.motoposmobile.app-material-icons-extended-release-50 C:\Users\grlds\.gradle\caches\9.3.0\transforms\d34b0e57b405ee5c5d9147930816b115\workspace\transformed\material-icons-extended-release\res
+com.grandtips.motoposmobile.app-lifecycle-viewmodel-compose-release-51 C:\Users\grlds\.gradle\caches\9.3.0\transforms\d3690b05ab58ab9765f4556f1d1f68be\workspace\transformed\lifecycle-viewmodel-compose-release\res
+com.grandtips.motoposmobile.app-navigation-compose-2.7.7-52 C:\Users\grlds\.gradle\caches\9.3.0\transforms\d696f6d8adea2d6b88121b1ace8884af\workspace\transformed\navigation-compose-2.7.7\res
+com.grandtips.motoposmobile.app-lifecycle-viewmodel-savedstate-2.8.3-53 C:\Users\grlds\.gradle\caches\9.3.0\transforms\d936f46cf4ce3d8f603e38efadfc24ad\workspace\transformed\lifecycle-viewmodel-savedstate-2.8.3\res
+com.grandtips.motoposmobile.app-material3-release-54 C:\Users\grlds\.gradle\caches\9.3.0\transforms\e3da706f49cc97bca5dd288190192afc\workspace\transformed\material3-release\res
+com.grandtips.motoposmobile.app-lifecycle-viewmodel-release-55 C:\Users\grlds\.gradle\caches\9.3.0\transforms\e731b7eb30c23eba2fb94871d51f3237\workspace\transformed\lifecycle-viewmodel-release\res
+com.grandtips.motoposmobile.app-navigation-runtime-ktx-2.7.7-56 C:\Users\grlds\.gradle\caches\9.3.0\transforms\e8f0d426da8b16ce9b82c177a80b3811\workspace\transformed\navigation-runtime-ktx-2.7.7\res
+com.grandtips.motoposmobile.app-lifecycle-runtime-ktx-release-57 C:\Users\grlds\.gradle\caches\9.3.0\transforms\ef564e452ab1e665c4ced0d0111db3d8\workspace\transformed\lifecycle-runtime-ktx-release\res
+com.grandtips.motoposmobile.app-ui-tooling-release-58 C:\Users\grlds\.gradle\caches\9.3.0\transforms\f072abd471ee1d25dd5ff29a592c47b5\workspace\transformed\ui-tooling-release\res
+com.grandtips.motoposmobile.app-ui-test-manifest-1.6.8-59 C:\Users\grlds\.gradle\caches\9.3.0\transforms\f314b4d0caba56aed22eddba9139cfe1\workspace\transformed\ui-test-manifest-1.6.8\res
+com.grandtips.motoposmobile.app-profileinstaller-1.3.1-60 C:\Users\grlds\.gradle\caches\9.3.0\transforms\f7c839da3d21b448677971924afbf005\workspace\transformed\profileinstaller-1.3.1\res
+com.grandtips.motoposmobile.app-pngs-61 C:\Users\grlds\OneDrive\Desktop\POS System Motor Shop\android-app\app\build\generated\res\pngs\debug
+com.grandtips.motoposmobile.app-resValues-62 C:\Users\grlds\OneDrive\Desktop\POS System Motor Shop\android-app\app\build\generated\res\resValues\debug
+com.grandtips.motoposmobile.app-packageDebugResources-63 C:\Users\grlds\OneDrive\Desktop\POS System Motor Shop\android-app\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.grandtips.motoposmobile.app-packageDebugResources-64 C:\Users\grlds\OneDrive\Desktop\POS System Motor Shop\android-app\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.grandtips.motoposmobile.app-debug-65 C:\Users\grlds\OneDrive\Desktop\POS System Motor Shop\android-app\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.grandtips.motoposmobile.app-debug-66 C:\Users\grlds\OneDrive\Desktop\POS System Motor Shop\android-app\app\src\debug\res
+com.grandtips.motoposmobile.app-main-67 C:\Users\grlds\OneDrive\Desktop\POS System Motor Shop\android-app\app\src\main\res

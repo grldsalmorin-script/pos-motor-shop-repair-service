@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.grandtips.motoposmobile.app-mergeDebugResources-63:/values-watch-v21/values-watch-v21.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\grlds\\.gradle\\caches\\9.3.0\\transforms\\3be66d81fe8b836c06b92b5bbbd42620\\workspace\\transformed\\appcompat-1.6.1\\res\\values-watch-v21\\values-watch-v21.xml",
+                    "from": {
+                        "startLines": "2,6,10",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,271,499",
+                        "endLines": "5,9,13",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "266,494,724"
+                    }
+                }
+            ]
+        }
+    ]
+}
