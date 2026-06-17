@@ -48,6 +48,9 @@ data class InventoryStock(
     val qty: Int,
     @SerializedName("sell_price") val sellPrice: Double,
     @SerializedName("sell_rate") val sellRate: Double,
+    val width: Double = 0.0,
+    val length: Double = 0.0,
+    val cft: Double = 0.0,
     val image: String = "",
     val notes: String = "",
     val status: String = "available"
@@ -76,6 +79,17 @@ data class InventorySaveResult(
     @SerializedName("inventory_id") val inventoryId: Int
 )
 
+data class MobileCheckoutItem(
+    @SerializedName("wood_stock_id") val woodStockId: Int,
+    val serial: String,
+    val qty: Int,
+    val rate: Double,
+    val width: Double = 0.0,
+    val length: Double = 0.0,
+    val cft: Double = 0.0,
+    @SerializedName("line_total") val lineTotal: Double
+)
+
 data class MobileSaleResult(
     val id: Int,
     @SerializedName("invoice_no") val invoiceNo: String
@@ -88,6 +102,68 @@ data class MobileCustomerSummary(
     val address: String = "",
     @SerializedName("total_due") val totalDue: Double = 0.0,
     @SerializedName("created_at") val createdAt: String = ""
+)
+
+data class MobileVehicleSummary(
+    val id: Int,
+    @SerializedName("customer_id") val customerId: Int = 0,
+    @SerializedName("customer_name") val customerName: String = "",
+    @SerializedName("plate_no") val plateNo: String = "",
+    @SerializedName("vehicle_make") val vehicleMake: String = "",
+    @SerializedName("vehicle_model") val vehicleModel: String = "",
+    @SerializedName("year_model") val yearModel: String = "",
+    val color: String = "",
+    @SerializedName("engine_no") val engineNo: String = "",
+    @SerializedName("chassis_no") val chassisNo: String = "",
+    @SerializedName("odo_reading") val odoReading: Double = 0.0,
+    val notes: String = "",
+    @SerializedName("is_active") val isActive: Int = 1,
+    @SerializedName("created_at") val createdAt: String = ""
+) {
+    val label: String
+        get() = listOf(plateNo, vehicleMake, vehicleModel).filter { it.isNotBlank() }.joinToString(" • ")
+}
+
+data class MobileVehicleSaveResult(
+    val id: Int
+)
+
+data class MobileVehicleType(
+    val id: Int,
+    val brand: String = "",
+    val model: String = "",
+    val category: String = "",
+    val label: String = ""
+)
+
+data class MobileWorkOrderSummary(
+    val id: Int,
+    @SerializedName("work_order_no") val workOrderNo: String = "",
+    @SerializedName("customer_id") val customerId: Int = 0,
+    @SerializedName("customer_name") val customerName: String = "",
+    @SerializedName("vehicle_id") val vehicleId: Int = 0,
+    @SerializedName("vehicle_label") val vehicleLabel: String = "",
+    val complaint: String = "",
+    val diagnosis: String = "",
+    @SerializedName("mechanic_id") val mechanicId: Int? = null,
+    @SerializedName("mechanic_name") val mechanicName: String = "",
+    val priority: String = "normal",
+    val status: String = "pending",
+    @SerializedName("labor_total") val laborTotal: Double = 0.0,
+    @SerializedName("parts_total") val partsTotal: Double = 0.0,
+    val subtotal: Double = 0.0,
+    val discount: Double = 0.0,
+    @SerializedName("grand_total") val grandTotal: Double = 0.0,
+    @SerializedName("paid_amount") val paidAmount: Double = 0.0,
+    @SerializedName("due_amount") val dueAmount: Double = 0.0,
+    @SerializedName("sale_id") val saleId: Int? = null,
+    val notes: String = "",
+    @SerializedName("check_in_at") val checkInAt: String = "",
+    @SerializedName("created_by") val createdBy: Int = 0
+)
+
+data class MobileWorkOrderSaveResult(
+    val id: Int
 )
 
 data class MobileSaleSummary(

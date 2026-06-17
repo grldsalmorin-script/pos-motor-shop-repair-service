@@ -8,5 +8,5 @@ public final class BuildConfig {
   public static final String APPLICATION_ID = "com.grandtips.motoposmobile.test";
   public static final String BUILD_TYPE = "debug";
   // Field from default config.
-  public static final String APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzn7Y7zwgdsTPSzyMH1hzTfMPeIYaQidAEfMz4anYQHFW_Vlc3-TeeB6qf6XKdCYdlk/exec";
+  public static final String APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzeGxBqIJFFcSQpUk4ZgJnzmwixBSyG85osPvo1ZejPsvO4eb4Tkr958xyhL82uvdmW/exec";
 }

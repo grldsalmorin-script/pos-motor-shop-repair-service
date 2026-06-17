@@ -29,8 +29,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PointOfSale
@@ -85,12 +87,16 @@ import com.grandtips.motoposmobile.model.BarcodeTemplateDraft
 import com.grandtips.motoposmobile.model.InventoryStock
 import com.grandtips.motoposmobile.model.MobileCustomerSummary
 import com.grandtips.motoposmobile.model.MobileDashboardTemplate
+import com.grandtips.motoposmobile.model.MobileCheckoutItem
 import com.grandtips.motoposmobile.model.MobileInventoryLookup
 import com.grandtips.motoposmobile.model.MobileSaleDetail
 import com.grandtips.motoposmobile.model.MobileSaleSummary
 import com.grandtips.motoposmobile.model.MobileSaleResult
 import com.grandtips.motoposmobile.model.MobileSession
 import com.grandtips.motoposmobile.model.MobileUser
+import com.grandtips.motoposmobile.model.MobileVehicleSummary
+import com.grandtips.motoposmobile.model.MobileVehicleType
+import com.grandtips.motoposmobile.model.MobileWorkOrderSummary
 import com.grandtips.motoposmobile.permissions.RolePermissionTemplates
 import com.grandtips.motoposmobile.scanner.BarcodeScannerView
 import java.util.Locale
@@ -112,6 +118,19 @@ private data class NavItem(
     val key: String,
     val label: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector
+)
+
+private data class TicketCartItem(
+    val stockId: Int,
+    val barcode: String,
+    val title: String,
+    val subtitle: String,
+    val qty: Int,
+    val rate: Double,
+    val width: Double,
+    val length: Double,
+    val cft: Double,
+    val lineTotal: Double
 )
 
 class MainActivity : ComponentActivity() {
@@ -139,6 +158,9 @@ class MainViewModel(private val repo: AppsScriptRepository) : ViewModel() {
     var lastLookup by mutableStateOf<MobileInventoryLookup?>(null)
     var inventoryItems by mutableStateOf<List<InventoryStock>>(emptyList())
     var customers by mutableStateOf<List<MobileCustomerSummary>>(emptyList())
+    var vehicles by mutableStateOf<List<MobileVehicleSummary>>(emptyList())
+    var vehicleTypes by mutableStateOf<List<MobileVehicleType>>(emptyList())
+    var workOrders by mutableStateOf<List<MobileWorkOrderSummary>>(emptyList())
     var sales by mutableStateOf<List<MobileSaleSummary>>(emptyList())
     var selectedSaleDetail by mutableStateOf<MobileSaleDetail?>(null)
     var message by mutableStateOf("")
@@ -162,6 +184,9 @@ class MainViewModel(private val repo: AppsScriptRepository) : ViewModel() {
         val token = session?.token ?: return
         repo.getInventoryItems(token).onSuccess { inventoryItems = it }.onFailure { message = it.message ?: "Inventory load failed" }
         repo.getCustomers(token).onSuccess { customers = it }.onFailure { message = it.message ?: "Customer load failed" }
+        repo.getVehicles(token).onSuccess { vehicles = it }.onFailure { message = it.message ?: "Vehicle load failed" }
+        repo.getVehicleTypes(token).onSuccess { vehicleTypes = it }.onFailure { message = it.message ?: "Vehicle type load failed" }
+        repo.getWorkOrders(token).onSuccess { workOrders = it }.onFailure { message = it.message ?: "Work order load failed" }
         repo.getSales(token).onSuccess { sales = it }.onFailure { message = it.message ?: "Receipts load failed" }
     }
 
@@ -228,8 +253,7 @@ class MainViewModel(private val repo: AppsScriptRepository) : ViewModel() {
     }
 
     suspend fun submitSale(
-        stockId: Int,
-        qty: Int,
+        items: List<MobileCheckoutItem>,
         customerName: String,
         paidAmount: String,
         paymentMethod: String,
@@ -238,7 +262,7 @@ class MainViewModel(private val repo: AppsScriptRepository) : ViewModel() {
     ): Boolean {
         val current = session ?: return false
         loading = true
-        val result: Result<MobileSaleResult> = repo.submitMobileSale(current.token, stockId, qty, customerName, paidAmount, paymentMethod, notes, status)
+        val result: Result<MobileSaleResult> = repo.submitMobileSale(current.token, items, customerName, paidAmount, paymentMethod, notes, status)
         loading = false
         return result.onSuccess {
             message = "Sale saved: ${it.invoiceNo}"
@@ -262,6 +286,134 @@ class MainViewModel(private val repo: AppsScriptRepository) : ViewModel() {
         }.onFailure {
             message = it.message ?: "Customer save failed"
         }.getOrNull()
+    }
+
+    suspend fun createVehicle(
+        customerId: Int,
+        plateNo: String,
+        vehicleMake: String,
+        vehicleModel: String,
+        yearModel: String,
+        color: String,
+        engineNo: String,
+        chassisNo: String,
+        odoReading: String,
+        notes: String
+    ): Int? {
+        val current = session ?: return null
+        loading = true
+        val result = repo.addVehicle(current.token, customerId, plateNo, vehicleMake, vehicleModel, yearModel, color, engineNo, chassisNo, odoReading, notes)
+        loading = false
+        return result.onSuccess {
+            message = "Vehicle added: $plateNo"
+            refreshWorkspace()
+        }.onFailure {
+            message = it.message ?: "Vehicle save failed"
+        }.getOrNull()?.id
+    }
+
+    suspend fun updateVehicle(
+        id: Int,
+        customerId: Int,
+        plateNo: String,
+        vehicleMake: String,
+        vehicleModel: String,
+        yearModel: String,
+        color: String,
+        engineNo: String,
+        chassisNo: String,
+        odoReading: String,
+        notes: String,
+        isActive: Int
+    ): Int? {
+        val current = session ?: return null
+        loading = true
+        val result = repo.updateVehicle(current.token, id, customerId, plateNo, vehicleMake, vehicleModel, yearModel, color, engineNo, chassisNo, odoReading, notes, isActive)
+        loading = false
+        return result.onSuccess {
+            message = "Vehicle updated: $plateNo"
+            refreshWorkspace()
+        }.onFailure {
+            message = it.message ?: "Vehicle update failed"
+        }.getOrNull()?.id
+    }
+
+    suspend fun createWorkOrder(
+        customerId: Int,
+        vehicleId: Int,
+        complaint: String,
+        diagnosis: String,
+        priority: String,
+        notes: String
+    ): Int? {
+        val current = session ?: return null
+        loading = true
+        val result = repo.createWorkOrder(current.token, customerId, vehicleId, complaint, diagnosis, priority, notes)
+        loading = false
+        return result.onSuccess {
+            message = "Work order created"
+            refreshWorkspace()
+        }.onFailure {
+            message = it.message ?: "Work order save failed"
+        }.getOrNull()?.id
+    }
+
+    suspend fun updateWorkOrder(
+        id: Int,
+        customerId: Int,
+        vehicleId: Int,
+        complaint: String,
+        diagnosis: String,
+        priority: String,
+        notes: String
+    ): Int? {
+        val current = session ?: return null
+        loading = true
+        val result = repo.updateWorkOrder(current.token, id, customerId, vehicleId, complaint, diagnosis, priority, notes)
+        loading = false
+        return result.onSuccess {
+            message = "Work order updated"
+            refreshWorkspace()
+        }.onFailure {
+            message = it.message ?: "Work order update failed"
+        }.getOrNull()?.id
+    }
+
+    suspend fun addItemToWorkOrder(
+        workOrderId: Int,
+        stockId: Int,
+        qty: Int,
+        notes: String
+    ): Boolean {
+        val current = session ?: return false
+        loading = true
+        val result = repo.addWorkOrderItem(current.token, workOrderId, stockId, qty, notes)
+        loading = false
+        return result.onSuccess {
+            message = "Item added to work order"
+            refreshWorkspace()
+        }.onFailure {
+            message = it.message ?: "Failed to add work-order item"
+        }.isSuccess
+    }
+
+    suspend fun checkoutWorkOrder(
+        workOrderId: Int,
+        paidAmount: String,
+        paymentMethod: String,
+        notes: String
+    ): Boolean {
+        val current = session ?: return false
+        loading = true
+        val result = repo.checkoutWorkOrder(current.token, workOrderId, paidAmount, paymentMethod, notes)
+        loading = false
+        return result.onSuccess {
+            message = "Service checked out: ${it.invoiceNo}"
+            lastLookup = null
+            refreshWorkspace()
+        }.onFailure {
+            message = it.message ?: "Work order checkout failed"
+        }.isSuccess
     }
 
     suspend fun saveInventoryDraft(
@@ -295,6 +447,15 @@ class MainViewModel(private val repo: AppsScriptRepository) : ViewModel() {
     fun clearTicketLookup() {
         lastLookup = null
     }
+
+    fun previewInventoryItem(item: InventoryStock) {
+        lastLookup = MobileInventoryLookup(
+            barcode = item.barcode,
+            template = null,
+            inventory = listOf(item),
+            availableCount = item.qty
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -308,15 +469,37 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
     var showItemEditor by remember { mutableStateOf(false) }
     var cameraAllowed by remember { mutableStateOf(false) }
     var activeNav by remember { mutableStateOf("home") }
+    var ticketMode by remember { mutableStateOf("sale") }
     var customerQuery by remember { mutableStateOf("Walk-in customer") }
+    var selectedCustomerId by remember { mutableStateOf<Int?>(null) }
     var showNewCustomerForm by remember { mutableStateOf(false) }
     var newCustomerName by remember { mutableStateOf("") }
     var newCustomerPhone by remember { mutableStateOf("") }
     var newCustomerAddress by remember { mutableStateOf("") }
+    var vehicleQuery by remember { mutableStateOf("") }
+    var selectedVehicleId by remember { mutableStateOf<Int?>(null) }
+    var showNewVehicleForm by remember { mutableStateOf(false) }
+    var editingVehicleId by remember { mutableStateOf<Int?>(null) }
+    var vehicleIsActive by remember { mutableStateOf(1) }
+    var vehiclePlateNo by remember { mutableStateOf("") }
+    var vehicleMake by remember { mutableStateOf("") }
+    var vehicleModel by remember { mutableStateOf("") }
+    var vehicleYearModel by remember { mutableStateOf("") }
+    var vehicleColor by remember { mutableStateOf("") }
+    var vehicleEngineNo by remember { mutableStateOf("") }
+    var vehicleChassisNo by remember { mutableStateOf("") }
+    var vehicleOdoReading by remember { mutableStateOf("") }
+    var vehicleNotes by remember { mutableStateOf("") }
+    var selectedWorkOrderId by remember { mutableStateOf<Int?>(null) }
+    var editingWorkOrderId by remember { mutableStateOf<Int?>(null) }
+    var workComplaint by remember { mutableStateOf("") }
+    var workDiagnosis by remember { mutableStateOf("") }
+    var workPriority by remember { mutableStateOf("normal") }
     var saleQty by remember { mutableStateOf("1") }
     var paidAmount by remember { mutableStateOf("") }
     var payMethod by remember { mutableStateOf("Cash") }
     var notes by remember { mutableStateOf("") }
+    var ticketItems by remember { mutableStateOf(listOf<TicketCartItem>()) }
     var showPosScanner by remember { mutableStateOf(false) }
     var showInventoryScanner by remember { mutableStateOf(false) }
     var showHoldConfirm by remember { mutableStateOf(false) }
@@ -359,6 +542,8 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
                     NavItem("home", "Sales", Icons.Filled.PointOfSale),
                     NavItem("pos", "Ticket", Icons.Filled.Sell),
                     NavItem("inventory", "Items", Icons.Filled.Warehouse),
+                    NavItem("workorders", "Work Orders", Icons.AutoMirrored.Filled.Assignment),
+                    NavItem("vehicles", "Vehicle Registry", Icons.Filled.DirectionsCar),
                     NavItem("receipts", "Receipts", Icons.AutoMirrored.Filled.ReceiptLong),
                     NavItem("about", "About", Icons.Filled.Info)
                 )
@@ -368,24 +553,70 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
             val qtyAvailable = selectedInventoryItem?.qty ?: 0
             val selectedQty = (saleQty.toIntOrNull() ?: 1).coerceAtLeast(1).let { if (qtyAvailable > 0) minOf(it, qtyAvailable) else it }
             val totalPrice = currentPrice * selectedQty
-            val dueAmount = (totalPrice - (paidAmount.toDoubleOrNull() ?: 0.0)).coerceAtLeast(0.0)
+            val cartTotal = ticketItems.sumOf { it.lineTotal }
+            val dueAmount = (cartTotal - (paidAmount.toDoubleOrNull() ?: 0.0)).coerceAtLeast(0.0)
+            val filteredTicketInventory = remember(barcode, vm.inventoryItems) {
+                val q = barcode.trim().lowercase()
+                if (q.isBlank()) emptyList() else vm.inventoryItems.filter {
+                    val hay = listOf(it.barcode, it.sku, it.inventoryGroup, it.notes).joinToString(" ").lowercase()
+                    hay.contains(q)
+                }.take(12)
+            }
             val filteredCustomers = remember(customerQuery, vm.customers) {
                 val q = customerQuery.trim().lowercase()
                 if (q.isBlank() || q == "walk-in customer") emptyList() else vm.customers.filter {
                     it.name.lowercase().contains(q) || it.phone.lowercase().contains(q)
                 }.take(8)
             }
+            val filteredVehicles = remember(vehicleQuery, vm.vehicleTypes) {
+                val q = vehicleQuery.trim().lowercase()
+                val pool = vm.vehicleTypes
+                if (q.isBlank()) emptyList() else pool.filter {
+                    it.brand.lowercase().contains(q) ||
+                        it.model.lowercase().contains(q) ||
+                        it.category.lowercase().contains(q) ||
+                        it.label.lowercase().contains(q)
+                }.take(20)
+            }
+            val visibleWorkOrders = remember(selectedCustomerId, selectedVehicleId, vm.workOrders) {
+                vm.workOrders.filter {
+                    (selectedCustomerId == null || it.customerId == selectedCustomerId) &&
+                        (selectedVehicleId == null || it.vehicleId == selectedVehicleId)
+                }.take(12)
+            }
             val resetTicketForm = {
+                ticketMode = "sale"
                 barcode = ""
                 customerQuery = "Walk-in customer"
+                selectedCustomerId = null
                 showNewCustomerForm = false
                 newCustomerName = ""
                 newCustomerPhone = ""
                 newCustomerAddress = ""
+                vehicleQuery = ""
+                selectedVehicleId = null
+                showNewVehicleForm = false
+                editingVehicleId = null
+                vehicleIsActive = 1
+                vehiclePlateNo = ""
+                vehicleMake = ""
+                vehicleModel = ""
+                vehicleYearModel = ""
+                vehicleColor = ""
+                vehicleEngineNo = ""
+                vehicleChassisNo = ""
+                vehicleOdoReading = ""
+                vehicleNotes = ""
+                selectedWorkOrderId = null
+                editingWorkOrderId = null
+                workComplaint = ""
+                workDiagnosis = ""
+                workPriority = "normal"
                 saleQty = "1"
                 paidAmount = ""
                 payMethod = "Cash"
                 notes = ""
+                ticketItems = emptyList()
                 showPosScanner = false
                 showHoldConfirm = false
                 showCompleteConfirm = false
@@ -406,25 +637,93 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
                         qty = fallbackQty ?: template.defaultQty.toString()
                     )
                 } else if (lookup != null) {
-                    draft = draft.copy(
-                        barcode = lookup.barcode,
-                        qty = fallbackQty ?: draft.qty
-                    )
+                    draft = draft.copy(barcode = lookup.barcode, qty = fallbackQty ?: draft.qty)
                 }
+            }
+            val addSelectedItemToTicket = {
+                val item = selectedInventoryItem
+                if (item != null) {
+                    val existing = ticketItems.firstOrNull { it.stockId == item.id }
+                    val addedQty = selectedQty
+                    val newQty = (existing?.qty ?: 0) + addedQty
+                    val safeQty = if (item.qty > 0) minOf(newQty, item.qty) else newQty
+                    val next = TicketCartItem(
+                        stockId = item.id,
+                        barcode = item.barcode,
+                        title = item.sku,
+                        subtitle = item.inventoryGroup,
+                        qty = safeQty,
+                        rate = item.sellRate,
+                        width = item.width,
+                        length = item.length,
+                        cft = item.cft,
+                        lineTotal = item.sellRate * safeQty
+                    )
+                    ticketItems = if (existing == null) {
+                        ticketItems + next
+                    } else {
+                        ticketItems.map { if (it.stockId == item.id) next else it }
+                    }
+                    barcode = ""
+                    saleQty = "1"
+                    vm.clearTicketLookup()
+                }
+            }
+
+            suspend fun ensureServiceVehicleId(): Int? {
+                selectedVehicleId?.let { return it }
+                val customerId = selectedCustomerId ?: return null
+                if (vehicleMake.isBlank() || vehicleModel.isBlank()) return null
+                val generatedPlate = if (vehiclePlateNo.isNotBlank()) vehiclePlateNo else "TEMP-" + System.currentTimeMillis().toString().takeLast(6)
+                val createdId = vm.createVehicle(
+                    customerId = customerId,
+                    plateNo = generatedPlate,
+                    vehicleMake = vehicleMake,
+                    vehicleModel = vehicleModel,
+                    yearModel = vehicleYearModel,
+                    color = vehicleColor,
+                    engineNo = vehicleEngineNo,
+                    chassisNo = vehicleChassisNo,
+                    odoReading = vehicleOdoReading,
+                    notes = vehicleNotes
+                ) ?: return null
+                selectedVehicleId = createdId
+                if (vehiclePlateNo.isBlank()) vehiclePlateNo = generatedPlate
+                vehicleQuery = listOf(vehicleMake, vehicleModel).filter { it.isNotBlank() }.joinToString(" • ")
+                return createdId
+            }
+
+            suspend fun ensureServiceWorkOrderId(): Int? {
+                return selectedWorkOrderId ?: vm.createWorkOrder(
+                    customerId = selectedCustomerId ?: return null,
+                    vehicleId = ensureServiceVehicleId() ?: return null,
+                    complaint = workComplaint,
+                    diagnosis = workDiagnosis,
+                    priority = workPriority,
+                    notes = notes
+                )?.also { selectedWorkOrderId = it }
             }
 
             if (showHoldConfirm) {
                 SaleConfirmDialog(
-                    title = "Hold Ticket?",
-                    message = "This will save the current ticket as pending.",
+                    title = if (ticketMode == "sale") "Hold Ticket?" else "Save Service Ticket?",
+                    message = if (ticketMode == "sale") "This will save the current ticket as pending." else "This will save the current service ticket as a work order.",
                     confirmLabel = "Yes, Hold",
                     onDismiss = { showHoldConfirm = false },
                     onConfirm = {
                         showHoldConfirm = false
-                        val stockId = selectedInventoryItem?.id ?: return@SaleConfirmDialog
                         scope.launch {
-                            if (vm.submitSale(stockId, selectedQty, customerQuery, "0", payMethod, notes, "pending")) {
-                                resetTicketForm()
+                            if (ticketMode == "sale") {
+                                val items = ticketItems.map {
+                                    MobileCheckoutItem(it.stockId, it.barcode, it.qty, it.rate, it.width, it.length, it.cft, it.lineTotal)
+                                }
+                                if (items.isNotEmpty() && vm.submitSale(items, customerQuery, "0", payMethod, notes, "pending")) {
+                                    resetTicketForm()
+                                }
+                            } else {
+                                val workOrderId = ensureServiceWorkOrderId() ?: return@launch
+                                val ok = ticketItems.all { vm.addItemToWorkOrder(workOrderId, it.stockId, it.qty, notes) }
+                                if (ok) resetTicketForm()
                             }
                         }
                     }
@@ -433,16 +732,26 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
 
             if (showCompleteConfirm) {
                 SaleConfirmDialog(
-                    title = "Complete Sale?",
-                    message = "This will finalize the ticket and record the payment.",
-                    confirmLabel = "Yes, Complete",
+                    title = if (ticketMode == "sale") "Complete Sale?" else "Complete Service?",
+                    message = if (ticketMode == "sale") "This will finalize the ticket and record the payment." else "This will checkout the work order and record the payment.",
+                    confirmLabel = if (ticketMode == "sale") "Yes, Complete" else "Yes, Checkout",
                     onDismiss = { showCompleteConfirm = false },
                     onConfirm = {
                         showCompleteConfirm = false
-                        val stockId = selectedInventoryItem?.id ?: return@SaleConfirmDialog
                         scope.launch {
-                            if (vm.submitSale(stockId, selectedQty, customerQuery, paidAmount, payMethod, notes, "completed")) {
-                                resetTicketForm()
+                            if (ticketMode == "sale") {
+                                val items = ticketItems.map {
+                                    MobileCheckoutItem(it.stockId, it.barcode, it.qty, it.rate, it.width, it.length, it.cft, it.lineTotal)
+                                }
+                                if (items.isNotEmpty() && vm.submitSale(items, customerQuery, paidAmount, payMethod, notes, "completed")) {
+                                    resetTicketForm()
+                                }
+                            } else {
+                                val workOrderId = ensureServiceWorkOrderId() ?: return@launch
+                                val added = ticketItems.all { vm.addItemToWorkOrder(workOrderId, it.stockId, it.qty, notes) }
+                                if (added && vm.checkoutWorkOrder(workOrderId, paidAmount, payMethod, notes)) {
+                                    resetTicketForm()
+                                }
                             }
                         }
                     }
@@ -465,62 +774,54 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
                     }
                 }
             ) {
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = {
-                                Column {
-                                    Text(screenTitle(activeNav), color = Color.White, fontWeight = FontWeight.SemiBold)
-                                    Text("Grand Tips MotoPH", color = Color.White.copy(alpha = 0.82f), style = MaterialTheme.typography.bodySmall)
-                                }
-                            },
-                            navigationIcon = {
-                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                    Icon(Icons.Filled.Menu, contentDescription = "Menu", tint = Color.White)
-                                }
-                            },
-                            colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
-                                containerColor = Navy
-                            )
-                        )
-                    },
-                    containerColor = SurfaceTint,
-                    floatingActionButton = {
-                        if (activeNav == "inventory") {
-                            FloatingActionButton(
-                                onClick = {
-                                    editingInventoryId = null
-                                    barcode = ""
-                                    draft = BarcodeTemplateDraft()
-                                    showItemEditor = true
-                                    if (!cameraAllowed) {
-                                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Scaffold(
+                        topBar = {
+                            TopAppBar(
+                                title = {
+                                    Column {
+                                        Text(screenTitle(activeNav), color = Color.White, fontWeight = FontWeight.SemiBold)
+                                        Text("Grand Tips MotoPH", color = Color.White.copy(alpha = 0.82f), style = MaterialTheme.typography.bodySmall)
                                     }
-                                    showInventoryScanner = true
                                 },
-                                containerColor = Blue,
-                                contentColor = Color.White
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = "Add item")
-                            }
-                        }
-                    },
-                    snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-                ) { padding ->
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        item {
-                            MobileHeaderCard(
-                                user = session.user,
-                                dashboard = vm.dashboard
+                                navigationIcon = {
+                                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                        Icon(Icons.Filled.Menu, contentDescription = "Menu", tint = Color.White)
+                                    }
+                                },
+                                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = Navy)
                             )
-                        }
-                        item {
-                            when (activeNav) {
+                        },
+                        containerColor = SurfaceTint,
+                        floatingActionButton = {
+                            if (activeNav == "inventory") {
+                                FloatingActionButton(
+                                    onClick = {
+                                        editingInventoryId = null
+                                        barcode = ""
+                                        draft = BarcodeTemplateDraft()
+                                        showItemEditor = true
+                                        if (!cameraAllowed) cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                        showInventoryScanner = true
+                                    },
+                                    containerColor = Blue,
+                                    contentColor = Color.White
+                                ) {
+                                    Icon(Icons.Filled.Add, contentDescription = "Add item")
+                                }
+                            }
+                        },
+                        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+                    ) { padding ->
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize().padding(padding),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            item {
+                                MobileHeaderCard(user = session.user, dashboard = vm.dashboard)
+                            }
+                            item {
+                                when (activeNav) {
                                 "home" -> HomeDashboardPanel(
                                     sales = vm.sales,
                                     inventoryCount = vm.inventoryItems.size,
@@ -530,9 +831,171 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
                                     onOpenReceipts = { activeNav = "receipts" }
                                 )
 
-                                "about" -> AboutPanel(
-                                    user = session.user,
-                                    cards = vm.dashboard
+                                "about" -> AboutPanel(user = session.user, cards = vm.dashboard)
+
+                                "vehicles" -> VehicleRegistryPanel(
+                                    vehicles = vm.vehicles,
+                                    customerQuery = customerQuery,
+                                    customers = filteredCustomers,
+                                    selectedCustomerId = selectedCustomerId,
+                                    showNewVehicleForm = showNewVehicleForm,
+                                    editingVehicleId = editingVehicleId,
+                                    vehicleIsActive = vehicleIsActive,
+                                    vehiclePlateNo = vehiclePlateNo,
+                                    vehicleMake = vehicleMake,
+                                    vehicleModel = vehicleModel,
+                                    vehicleYearModel = vehicleYearModel,
+                                    vehicleColor = vehicleColor,
+                                    vehicleEngineNo = vehicleEngineNo,
+                                    vehicleChassisNo = vehicleChassisNo,
+                                    vehicleOdoReading = vehicleOdoReading,
+                                    vehicleNotes = vehicleNotes,
+                                    loading = vm.loading,
+                                    onCustomerQueryChange = {
+                                        customerQuery = it
+                                        if (it.isBlank()) selectedCustomerId = null
+                                    },
+                                    onPickCustomer = {
+                                        selectedCustomerId = it.id
+                                        customerQuery = it.name
+                                    },
+                                    onToggleVehicleForm = {
+                                        if (showNewVehicleForm) {
+                                            editingVehicleId = null
+                                            vehicleIsActive = 1
+                                            vehiclePlateNo = ""
+                                            vehicleMake = ""
+                                            vehicleModel = ""
+                                            vehicleYearModel = ""
+                                            vehicleColor = ""
+                                            vehicleEngineNo = ""
+                                            vehicleChassisNo = ""
+                                            vehicleOdoReading = ""
+                                            vehicleNotes = ""
+                                        }
+                                        showNewVehicleForm = !showNewVehicleForm
+                                    },
+                                    onVehiclePlateChange = { vehiclePlateNo = it },
+                                    onVehicleMakeChange = { vehicleMake = it },
+                                    onVehicleModelChange = { vehicleModel = it },
+                                    onVehicleYearChange = { vehicleYearModel = it },
+                                    onVehicleColorChange = { vehicleColor = it },
+                                    onVehicleEngineChange = { vehicleEngineNo = it },
+                                    onVehicleChassisChange = { vehicleChassisNo = it },
+                                    onVehicleOdoChange = { vehicleOdoReading = it },
+                                    onVehicleNotesChange = { vehicleNotes = it },
+                                    onEditVehicle = { vehicle ->
+                                        editingVehicleId = vehicle.id
+                                        selectedCustomerId = vehicle.customerId
+                                        customerQuery = vehicle.customerName
+                                        vehicleIsActive = vehicle.isActive
+                                        vehiclePlateNo = vehicle.plateNo
+                                        vehicleMake = vehicle.vehicleMake
+                                        vehicleModel = vehicle.vehicleModel
+                                        vehicleYearModel = vehicle.yearModel
+                                        vehicleColor = vehicle.color
+                                        vehicleEngineNo = vehicle.engineNo
+                                        vehicleChassisNo = vehicle.chassisNo
+                                        vehicleOdoReading = vehicle.odoReading.toString()
+                                        vehicleNotes = vehicle.notes
+                                        showNewVehicleForm = true
+                                    },
+                                    onSaveVehicle = {
+                                        scope.launch {
+                                            val customerId = selectedCustomerId ?: return@launch
+                                            val savedId = if (editingVehicleId == null) {
+                                                vm.createVehicle(customerId, vehiclePlateNo, vehicleMake, vehicleModel, vehicleYearModel, vehicleColor, vehicleEngineNo, vehicleChassisNo, vehicleOdoReading, vehicleNotes)
+                                            } else {
+                                                vm.updateVehicle(editingVehicleId!!, customerId, vehiclePlateNo, vehicleMake, vehicleModel, vehicleYearModel, vehicleColor, vehicleEngineNo, vehicleChassisNo, vehicleOdoReading, vehicleNotes, vehicleIsActive)
+                                            }
+                                            if (savedId != null) {
+                                                showNewVehicleForm = false
+                                                editingVehicleId = null
+                                                vehicleIsActive = 1
+                                                vehiclePlateNo = ""
+                                                vehicleMake = ""
+                                                vehicleModel = ""
+                                                vehicleYearModel = ""
+                                                vehicleColor = ""
+                                                vehicleEngineNo = ""
+                                                vehicleChassisNo = ""
+                                                vehicleOdoReading = ""
+                                                vehicleNotes = ""
+                                            }
+                                        }
+                                    }
+                                )
+
+                                "workorders" -> WorkOrdersPanel(
+                                    workOrders = vm.workOrders,
+                                    customerQuery = customerQuery,
+                                    customers = filteredCustomers,
+                                    vehicleQuery = vehicleQuery,
+                                    vehicles = filteredVehicles,
+                                    selectedCustomerId = selectedCustomerId,
+                                    selectedVehicleId = selectedVehicleId,
+                                    editingWorkOrderId = editingWorkOrderId,
+                                    complaint = workComplaint,
+                                    diagnosis = workDiagnosis,
+                                    priority = workPriority,
+                                    notes = notes,
+                                    loading = vm.loading,
+                                    onCustomerQueryChange = {
+                                        customerQuery = it
+                                        if (it.isBlank()) selectedCustomerId = null
+                                    },
+                                    onPickCustomer = {
+                                        selectedCustomerId = it.id
+                                        customerQuery = it.name
+                                        selectedVehicleId = null
+                                        vehicleQuery = ""
+                                    },
+                                    onVehicleQueryChange = {
+                                        vehicleQuery = it
+                                        selectedVehicleId = null
+                                    },
+                                    onPickVehicle = {
+                                        vehicleQuery = it.label
+                                        vehicleMake = it.brand
+                                        vehicleModel = it.model
+                                        showNewVehicleForm = true
+                                        selectedVehicleId = null
+                                    },
+                                    onEditWorkOrder = { workOrder ->
+                                        editingWorkOrderId = workOrder.id
+                                        selectedWorkOrderId = workOrder.id
+                                        selectedCustomerId = workOrder.customerId
+                                        customerQuery = workOrder.customerName
+                                        selectedVehicleId = workOrder.vehicleId
+                                        vehicleQuery = workOrder.vehicleLabel
+                                        workComplaint = workOrder.complaint
+                                        workDiagnosis = workOrder.diagnosis
+                                        workPriority = workOrder.priority
+                                        notes = workOrder.notes
+                                    },
+                                    onComplaintChange = { workComplaint = it },
+                                    onDiagnosisChange = { workDiagnosis = it },
+                                    onPriorityChange = { workPriority = it },
+                                    onNotesChange = { notes = it },
+                                    onSaveWorkOrder = {
+                                        scope.launch {
+                                            val customerId = selectedCustomerId ?: return@launch
+                                            val vehicleId = ensureServiceVehicleId() ?: return@launch
+                                            val savedId = if (editingWorkOrderId == null) {
+                                                vm.createWorkOrder(customerId, vehicleId, workComplaint, workDiagnosis, workPriority, notes)
+                                            } else {
+                                                vm.updateWorkOrder(editingWorkOrderId!!, customerId, vehicleId, workComplaint, workDiagnosis, workPriority, notes)
+                                            }
+                                            if (savedId != null) {
+                                                selectedWorkOrderId = savedId
+                                                editingWorkOrderId = null
+                                                workComplaint = ""
+                                                workDiagnosis = ""
+                                                workPriority = "normal"
+                                                notes = ""
+                                            }
+                                        }
+                                    }
                                 )
 
                                 "inventory" -> InventoryIntakePanel(
@@ -572,9 +1035,7 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
                                             applyLookupToDraft(lookup, draft.qty)
                                         }
                                     },
-                                    onPrefill = {
-                                        applyLookupToDraft(vm.lastLookup, draft.qty)
-                                    },
+                                    onPrefill = { applyLookupToDraft(vm.lastLookup, draft.qty) },
                                     onDraftChange = { draft = it },
                                     onEditItem = { item ->
                                         editingInventoryId = item.id
@@ -631,16 +1092,33 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
                                 )
 
                                 else -> PosScanPanel(
+                                    ticketMode = ticketMode,
                                     barcode = barcode,
                                     lookup = vm.lastLookup,
                                     loading = vm.loading,
                                     customerQuery = customerQuery,
                                     customers = filteredCustomers,
+                                    selectedCustomerId = selectedCustomerId,
                                     showNewCustomerForm = showNewCustomerForm,
                                     newCustomerName = newCustomerName,
                                     newCustomerPhone = newCustomerPhone,
                                     newCustomerAddress = newCustomerAddress,
+                                    vehicleQuery = vehicleQuery,
+                                    vehicles = filteredVehicles,
+                                    selectedVehicleId = selectedVehicleId,
+                                    showNewVehicleForm = showNewVehicleForm,
+                                    vehiclePlateNo = vehiclePlateNo,
+                                    vehicleMake = vehicleMake,
+                                    vehicleModel = vehicleModel,
+                                    vehicleYearModel = vehicleYearModel,
+                                    workComplaint = workComplaint,
+                                    workDiagnosis = workDiagnosis,
+                                    workPriority = workPriority,
+                                    selectedWorkOrderId = selectedWorkOrderId,
+                                    visibleWorkOrders = visibleWorkOrders,
                                     saleQty = saleQty,
+                                    ticketItems = ticketItems,
+                                    searchResults = filteredTicketInventory,
                                     paidAmount = paidAmount,
                                     payMethod = payMethod,
                                     notes = notes,
@@ -651,6 +1129,10 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
                                     dueAmount = dueAmount,
                                     showScanner = showPosScanner,
                                     cameraAllowed = cameraAllowed,
+                                    onTicketModeChange = {
+                                        ticketMode = it
+                                        selectedWorkOrderId = null
+                                    },
                                     onToggleScanner = {
                                         if (!cameraAllowed) cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                                         showPosScanner = !showPosScanner
@@ -661,11 +1143,25 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
                                         scope.launch { vm.scanForPos(it) }
                                     },
                                     onBarcodeChange = { barcode = it },
-                                    onLookup = { scope.launch { vm.scanForPos(barcode) } },
-                                    onCustomerQueryChange = { customerQuery = it },
+                                    onLookup = {
+                                        val firstLocal = filteredTicketInventory.firstOrNull()
+                                        if (firstLocal != null) {
+                                            vm.previewInventoryItem(firstLocal)
+                                        } else {
+                                            scope.launch { vm.scanForPos(barcode) }
+                                        }
+                                    },
+                                    onPickSearchResult = { vm.previewInventoryItem(it) },
+                                    onCustomerQueryChange = {
+                                        customerQuery = it
+                                        if (it.isBlank()) selectedCustomerId = null
+                                    },
                                     onPickCustomer = {
+                                        selectedCustomerId = it.id
                                         customerQuery = it.name
                                         showNewCustomerForm = false
+                                        selectedVehicleId = null
+                                        vehicleQuery = ""
                                     },
                                     onToggleNewCustomer = { showNewCustomerForm = !showNewCustomerForm },
                                     onNewCustomerNameChange = { newCustomerName = it },
@@ -673,12 +1169,9 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
                                     onNewCustomerAddressChange = { newCustomerAddress = it },
                                     onSaveNewCustomer = {
                                         scope.launch {
-                                            val created = vm.createCustomer(
-                                                name = newCustomerName,
-                                                phone = newCustomerPhone,
-                                                address = newCustomerAddress
-                                            )
+                                            val created = vm.createCustomer(newCustomerName, newCustomerPhone, newCustomerAddress)
                                             if (created != null) {
+                                                selectedCustomerId = created.id
                                                 customerQuery = created.name
                                                 showNewCustomerForm = false
                                                 newCustomerName = ""
@@ -687,19 +1180,91 @@ private fun MotorShopPosMobileApp(vm: MainViewModel) {
                                             }
                                         }
                                     },
+                                    onVehicleQueryChange = {
+                                        vehicleQuery = it
+                                        selectedVehicleId = null
+                                    },
+                                    onPickVehicle = {
+                                        vehicleQuery = it.label
+                                        vehicleMake = it.brand
+                                        vehicleModel = it.model
+                                        showNewVehicleForm = true
+                                        selectedVehicleId = null
+                                    },
+                                    onToggleNewVehicle = { showNewVehicleForm = !showNewVehicleForm },
+                                    onVehiclePlateChange = { vehiclePlateNo = it },
+                                    onVehicleMakeChange = { vehicleMake = it },
+                                    onVehicleModelChange = { vehicleModel = it },
+                                    onVehicleYearChange = { vehicleYearModel = it },
+                                    onWorkComplaintChange = { workComplaint = it },
+                                    onWorkDiagnosisChange = { workDiagnosis = it },
+                                    onWorkPriorityChange = { workPriority = it },
+                                    onSelectWorkOrder = { workOrder ->
+                                        selectedWorkOrderId = workOrder.id
+                                        selectedCustomerId = workOrder.customerId
+                                        customerQuery = workOrder.customerName
+                                        selectedVehicleId = workOrder.vehicleId
+                                        vehicleQuery = workOrder.vehicleLabel
+                                        workComplaint = workOrder.complaint
+                                        workDiagnosis = workOrder.diagnosis
+                                        workPriority = workOrder.priority
+                                        notes = workOrder.notes
+                                    },
+                                    onCreateVehicle = {
+                                        scope.launch {
+                                            val customerId = selectedCustomerId ?: return@launch
+                                            val createdId = vm.createVehicle(customerId, vehiclePlateNo, vehicleMake, vehicleModel, vehicleYearModel, vehicleColor, vehicleEngineNo, vehicleChassisNo, vehicleOdoReading, vehicleNotes)
+                                            if (createdId != null) {
+                                                val createdVehicle = vm.vehicles.firstOrNull { it.id == createdId }
+                                                selectedVehicleId = createdId
+                                                vehicleQuery = createdVehicle?.label ?: vehiclePlateNo
+                                                showNewVehicleForm = false
+                                                vehiclePlateNo = ""
+                                                vehicleMake = ""
+                                                vehicleModel = ""
+                                                vehicleYearModel = ""
+                                                vehicleColor = ""
+                                                vehicleEngineNo = ""
+                                                vehicleChassisNo = ""
+                                                vehicleOdoReading = ""
+                                                vehicleNotes = ""
+                                            }
+                                        }
+                                    },
+                                    onCreateWorkOrder = {
+                                        scope.launch {
+                                            val customerId = selectedCustomerId ?: return@launch
+                                            val vehicleId = ensureServiceVehicleId() ?: return@launch
+                                            val createdId = vm.createWorkOrder(customerId, vehicleId, workComplaint, workDiagnosis, workPriority, notes)
+                                            if (createdId != null) selectedWorkOrderId = createdId
+                                        }
+                                    },
                                     onSaleQtyChange = { saleQty = it },
+                                    onAddCurrentItem = addSelectedItemToTicket,
+                                    onRemoveTicketItem = { stockId -> ticketItems = ticketItems.filterNot { it.stockId == stockId } },
                                     onPaidAmountChange = { paidAmount = it },
                                     onPayMethodChange = { payMethod = it },
                                     onNotesChange = { notes = it },
-                                    onHold = {
-                                        showHoldConfirm = true
-                                    },
-                                    onCompleteSale = {
-                                        showCompleteConfirm = true
+                                    onHold = { showHoldConfirm = true },
+                                    onCompleteSale = { showCompleteConfirm = true },
+                                    onAddScannedItemToWorkOrder = {
+                                        addSelectedItemToTicket()
                                     }
                                 )
+                                }
                             }
                         }
+                    }
+                    if (activeNav == "pos" && showPosScanner) {
+                        FullScreenScannerOverlay(
+                            cameraAllowed = cameraAllowed,
+                            onClose = { showPosScanner = false },
+                            onBarcodeDetected = {
+                                barcode = it
+                                showPosScanner = false
+                                scope.launch { vm.scanForPos(it) }
+                            }
+                        )
                     }
                 }
             }
@@ -901,16 +1466,33 @@ private fun AboutPanel(
 
 @Composable
 private fun PosScanPanel(
+    ticketMode: String,
     barcode: String,
     lookup: MobileInventoryLookup?,
     loading: Boolean,
     customerQuery: String,
     customers: List<MobileCustomerSummary>,
+    selectedCustomerId: Int?,
     showNewCustomerForm: Boolean,
     newCustomerName: String,
     newCustomerPhone: String,
     newCustomerAddress: String,
+    vehicleQuery: String,
+    vehicles: List<MobileVehicleType>,
+    selectedVehicleId: Int?,
+    showNewVehicleForm: Boolean,
+    vehiclePlateNo: String,
+    vehicleMake: String,
+    vehicleModel: String,
+    vehicleYearModel: String,
+    workComplaint: String,
+    workDiagnosis: String,
+    workPriority: String,
+    selectedWorkOrderId: Int?,
+    visibleWorkOrders: List<MobileWorkOrderSummary>,
     saleQty: String,
+    ticketItems: List<TicketCartItem>,
+    searchResults: List<InventoryStock>,
     paidAmount: String,
     payMethod: String,
     notes: String,
@@ -921,10 +1503,12 @@ private fun PosScanPanel(
     dueAmount: Double,
     showScanner: Boolean,
     cameraAllowed: Boolean,
+    onTicketModeChange: (String) -> Unit,
     onToggleScanner: () -> Unit,
     onBarcodeDetected: (String) -> Unit,
     onBarcodeChange: (String) -> Unit,
     onLookup: () -> Unit,
+    onPickSearchResult: (InventoryStock) -> Unit,
     onCustomerQueryChange: (String) -> Unit,
     onPickCustomer: (MobileCustomerSummary) -> Unit,
     onToggleNewCustomer: () -> Unit,
@@ -932,205 +1516,374 @@ private fun PosScanPanel(
     onNewCustomerPhoneChange: (String) -> Unit,
     onNewCustomerAddressChange: (String) -> Unit,
     onSaveNewCustomer: () -> Unit,
+    onVehicleQueryChange: (String) -> Unit,
+    onPickVehicle: (MobileVehicleType) -> Unit,
+    onToggleNewVehicle: () -> Unit,
+    onVehiclePlateChange: (String) -> Unit,
+    onVehicleMakeChange: (String) -> Unit,
+    onVehicleModelChange: (String) -> Unit,
+    onVehicleYearChange: (String) -> Unit,
+    onWorkComplaintChange: (String) -> Unit,
+    onWorkDiagnosisChange: (String) -> Unit,
+    onWorkPriorityChange: (String) -> Unit,
+    onSelectWorkOrder: (MobileWorkOrderSummary) -> Unit,
+    onCreateVehicle: () -> Unit,
+    onCreateWorkOrder: () -> Unit,
     onSaleQtyChange: (String) -> Unit,
+    onAddCurrentItem: () -> Unit,
+    onRemoveTicketItem: (Int) -> Unit,
     onPaidAmountChange: (String) -> Unit,
     onPayMethodChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
     onHold: () -> Unit,
-    onCompleteSale: () -> Unit
+    onCompleteSale: () -> Unit,
+    onAddScannedItemToWorkOrder: () -> Unit
 ) {
     val selected = lookup?.inventory?.firstOrNull()
     var showPaidAmountPad by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Surface(shape = RoundedCornerShape(20.dp), color = Color.White, shadowElevation = 4.dp) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Surface(shape = RoundedCornerShape(18.dp), color = BlueSoft) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("CHARGE", color = Navy, style = MaterialTheme.typography.titleMedium)
-                        Text(formatMoney(totalPrice), color = Navy, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Surface(shape = RoundedCornerShape(20.dp), color = Color.White, shadowElevation = 4.dp) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Surface(shape = RoundedCornerShape(18.dp), color = BlueSoft) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("CHARGE", color = Navy, style = MaterialTheme.typography.titleMedium)
+                            Text(formatMoney(ticketItems.sumOf { it.lineTotal }), color = Navy, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        SummaryChip("Mode", if (ticketMode == "sale") "Sale" else "Service")
+                        SummaryChip("Due", formatMoney(dueAmount), if (dueAmount > 0.0) Danger else Success)
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    SummaryChip("Customer", customerQuery)
-                    SummaryChip("Due", formatMoney(dueAmount), if (dueAmount > 0.0) Danger else Success)
+            }
+
+            SectionCard("Ticket Type", "Choose whether this ticket is for retail sale or service work.") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    PaymentChip("Sale", ticketMode == "sale") { onTicketModeChange("sale") }
+                    PaymentChip("Service", ticketMode == "service") { onTicketModeChange("service") }
                 }
             }
-        }
 
-        SectionCard("Add Customer To Ticket", "Select an existing customer from Google Sheets or add a new one.") {
-            val showCustomerMatches = customerQuery.isNotBlank() && customerQuery.trim().lowercase() != "walk-in customer"
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Filled.Search, contentDescription = "Search", tint = TextMuted)
-                Text("Existing customers", color = TextMuted)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            DraftField("Search customer dropdown", customerQuery, onCustomerQueryChange)
-            if (showCustomerMatches) {
+            SectionCard("Add Customer To Ticket", "Select an existing customer from Google Sheets or add a new one.") {
+                val showCustomerMatches = customerQuery.isNotBlank() && customerQuery.trim().lowercase() != "walk-in customer"
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Filled.Search, contentDescription = "Search", tint = TextMuted)
+                    Text("Existing customers", color = TextMuted)
+                }
                 Spacer(modifier = Modifier.height(8.dp))
-                Surface(shape = RoundedCornerShape(16.dp), color = BlueSoft, border = androidx.compose.foundation.BorderStroke(1.dp, Border)) {
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
-                        if (customers.isEmpty()) {
-                            Text("No matching customer found.", color = TextMuted, modifier = Modifier.padding(vertical = 10.dp))
-                        } else {
-                            customers.forEach { customer ->
-                                SimpleListTile(
-                                    title = customer.name,
-                                    subtitle = listOf(customer.phone, customer.address).filter { it.isNotBlank() }.joinToString("  "),
-                                    trailing = "Select",
-                                    onClick = { onPickCustomer(customer) }
-                                )
+                DraftField("Search customer dropdown", customerQuery, onCustomerQueryChange)
+                if (showCustomerMatches) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(shape = RoundedCornerShape(16.dp), color = BlueSoft, border = androidx.compose.foundation.BorderStroke(1.dp, Border)) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                            if (customers.isEmpty()) {
+                                Text("No matching customer found.", color = TextMuted, modifier = Modifier.padding(vertical = 10.dp))
+                            } else {
+                                customers.forEach { customer ->
+                                    SimpleListTile(
+                                        title = customer.name,
+                                        subtitle = listOf(customer.phone, customer.address).filter { it.isNotBlank() }.joinToString("  "),
+                                        trailing = "Select",
+                                        onClick = { onPickCustomer(customer) }
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Button(
-                onClick = onToggleNewCustomer,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Blue)
-            ) {
-                Text(if (showNewCustomerForm) "Cancel New Customer" else "New Customer")
-            }
-            if (showNewCustomerForm) {
                 Spacer(modifier = Modifier.height(12.dp))
-                DraftField("Customer Name", newCustomerName, onNewCustomerNameChange)
-                Spacer(modifier = Modifier.height(8.dp))
-                DraftField("Phone", newCustomerPhone, onNewCustomerPhoneChange)
-                Spacer(modifier = Modifier.height(8.dp))
-                DraftField("Address", newCustomerAddress, onNewCustomerAddressChange)
-                Spacer(modifier = Modifier.height(10.dp))
+                if (selectedCustomerId != null) {
+                    Surface(shape = RoundedCornerShape(14.dp), color = BlueSoft) {
+                        Text("Selected customer is linked to service/work-order flow.", modifier = Modifier.padding(12.dp), color = Navy)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
                 Button(
-                    onClick = onSaveNewCustomer,
-                    enabled = !loading && newCustomerName.isNotBlank(),
+                    onClick = onToggleNewCustomer,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                ) {
+                    Text(if (showNewCustomerForm) "Cancel New Customer" else "New Customer")
+                }
+                if (showNewCustomerForm) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DraftField("Customer Name", newCustomerName, onNewCustomerNameChange)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DraftField("Phone", newCustomerPhone, onNewCustomerPhoneChange)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DraftField("Address", newCustomerAddress, onNewCustomerAddressChange)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = onSaveNewCustomer,
+                        enabled = !loading && newCustomerName.isNotBlank(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Navy)
+                    ) {
+                        Text(if (loading) "Saving Customer..." else "Save Customer")
+                    }
+                }
+            }
+
+            if (ticketMode == "service") {
+                SectionCard("Vehicle & Work Order", "Pick a vehicle, create one if needed, then create or attach a work order.") {
+                    DraftField("Search vehicle type", vehicleQuery, onVehicleQueryChange)
+                    if (vehicleQuery.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(shape = RoundedCornerShape(16.dp), color = BlueSoft, border = androidx.compose.foundation.BorderStroke(1.dp, Border)) {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                if (vehicles.isEmpty()) {
+                                    Text("No matching vehicle type found.", color = TextMuted, modifier = Modifier.padding(vertical = 10.dp))
+                                } else {
+                                    vehicles.forEach { vehicle ->
+                                        SimpleListTile(
+                                            title = vehicle.label,
+                                            subtitle = vehicle.category,
+                                            trailing = "Select",
+                                            onClick = { onPickVehicle(vehicle) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onToggleNewVehicle,
+                        enabled = selectedCustomerId != null,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                    ) {
+                        Text(if (showNewVehicleForm) "Cancel New Vehicle" else "New Vehicle")
+                    }
+                    if (showNewVehicleForm) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        DraftField("Plate Number", vehiclePlateNo, onVehiclePlateChange)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        DraftField("Make", vehicleMake, onVehicleMakeChange)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        DraftField("Model", vehicleModel, onVehicleModelChange)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        DraftField("Year Model", vehicleYearModel, onVehicleYearChange)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Button(
+                            onClick = onCreateVehicle,
+                            enabled = !loading && selectedCustomerId != null && vehiclePlateNo.isNotBlank() && vehicleMake.isNotBlank() && vehicleModel.isNotBlank(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Navy)
+                        ) {
+                            Text(if (loading) "Saving Vehicle..." else "Save Vehicle")
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DraftField("Complaint", workComplaint, onWorkComplaintChange)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DraftField("Diagnosis", workDiagnosis, onWorkDiagnosisChange)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Priority", color = TextMuted)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        PaymentChip("Low", workPriority == "low") { onWorkPriorityChange("low") }
+                        PaymentChip("Normal", workPriority == "normal") { onWorkPriorityChange("normal") }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        PaymentChip("High", workPriority == "high") { onWorkPriorityChange("high") }
+                        PaymentChip("Urgent", workPriority == "urgent") { onWorkPriorityChange("urgent") }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = onCreateWorkOrder,
+                        enabled = !loading && selectedCustomerId != null && (selectedVehicleId != null || (vehicleMake.isNotBlank() && vehicleModel.isNotBlank())) && workComplaint.isNotBlank(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Navy)
+                    ) {
+                        Text(if (selectedWorkOrderId == null) "Create Work Order" else "Create Another Work Order")
+                    }
+                    if (visibleWorkOrders.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Existing work orders", color = TextMuted)
+                        visibleWorkOrders.forEach { workOrder ->
+                            SimpleListTile(
+                                title = workOrder.workOrderNo.ifBlank { "Work Order #${workOrder.id}" },
+                                subtitle = "${workOrder.vehicleLabel} • ${workOrder.status}",
+                                trailing = if (selectedWorkOrderId == workOrder.id) "Active" else "Use",
+                                onClick = { onSelectWorkOrder(workOrder) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            SectionCard("Scan Item", if (ticketMode == "sale") "Use barcode scan or SKU search to add multiple sale items." else "Use barcode, job code, or description search to add multiple parts and services.") {
+                ActionHeaderRow(
+                    title = "Barcode scanner",
+                    buttonLabel = if (showScanner) "Close Scanner" else "Open Scanner",
+                    icon = Icons.Filled.QrCodeScanner,
+                    onClick = onToggleScanner
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = barcode,
+                    onValueChange = onBarcodeChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(if (ticketMode == "sale") "Search SKU / Barcode" else "Search barcode / job code / description") },
+                    shape = RoundedCornerShape(14.dp)
+                )
+                if (barcode.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(shape = RoundedCornerShape(16.dp), color = BlueSoft, border = androidx.compose.foundation.BorderStroke(1.dp, Border)) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                            if (searchResults.isEmpty()) {
+                                Text("No matching inventory item found.", color = TextMuted, modifier = Modifier.padding(vertical = 10.dp))
+                            } else {
+                                searchResults.forEach { result ->
+                                    SimpleListTile(
+                                        title = result.sku,
+                                        subtitle = listOf(result.inventoryGroup, result.notes).filter { it.isNotBlank() }.joinToString(" • "),
+                                        trailing = formatMoney(result.sellRate),
+                                        onClick = { onPickSearchResult(result) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = onLookup,
+                    enabled = !loading && barcode.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Navy)
                 ) {
-                    Text(if (loading) "Saving Customer..." else "Save Customer")
+                    Text(if (loading) "Checking stock..." else "Check Inventory & Price", fontWeight = FontWeight.Bold)
                 }
             }
-        }
 
-        SectionCard("Scan Item", "Use the barcode icon to open camera scan, then check stock and price.") {
-            ActionHeaderRow(
-                title = "Barcode scanner",
-                buttonLabel = if (showScanner) "Close Scanner" else "Open Scanner",
-                icon = Icons.Filled.QrCodeScanner,
-                onClick = onToggleScanner
-            )
-            if (showScanner) {
-                Spacer(modifier = Modifier.height(10.dp))
-                CameraPanel(cameraAllowed = cameraAllowed, onBarcodeDetected = onBarcodeDetected)
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            OutlinedTextField(
-                value = barcode,
-                onValueChange = onBarcodeChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Search SKU / Barcode") },
-                shape = RoundedCornerShape(14.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Button(
-                onClick = onLookup,
-                enabled = !loading && barcode.isNotBlank(),
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Navy)
-            ) {
-                Text(if (loading) "Checking stock..." else "Check Inventory & Price", fontWeight = FontWeight.Bold)
-            }
-        }
-
-        SectionCard("Items", "Active ticket lines with quantity and pricing.") {
-            TicketItemRow(
-                title = selected?.sku ?: "No scanned item yet",
-                subtitle = selected?.inventoryGroup ?: "Scan barcode to start",
-                price = formatMoney(currentPrice)
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            DraftField("Quantity", saleQty, onSaleQtyChange)
-            Spacer(modifier = Modifier.height(8.dp))
-            StatStrip(
-                stats = listOf(
-                    "Stock" to qtyAvailable.toString(),
-                    "Qty" to selectedQty.toString(),
-                    "Unit" to formatMoney(currentPrice)
+            SectionCard("Items", "Active ticket lines with quantity and pricing.") {
+                TicketItemRow(
+                    title = selected?.sku ?: "No scanned item yet",
+                    subtitle = selected?.inventoryGroup ?: "Scan barcode to start",
+                    price = formatMoney(currentPrice)
                 )
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Surface(shape = RoundedCornerShape(16.dp), color = BlueSoft) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Spacer(modifier = Modifier.height(10.dp))
+                DraftField("Quantity", saleQty, onSaleQtyChange)
+                Spacer(modifier = Modifier.height(8.dp))
+                StatStrip(
+                    stats = listOf(
+                        "Stock" to qtyAvailable.toString(),
+                        "Qty" to selectedQty.toString(),
+                        "Unit" to formatMoney(currentPrice)
+                    )
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(shape = RoundedCornerShape(16.dp), color = BlueSoft) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Total", color = Navy, fontWeight = FontWeight.SemiBold)
+                        Text(formatMoney(totalPrice), color = Navy, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(
+                    onClick = onAddCurrentItem,
+                    enabled = selected != null,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Success)
                 ) {
-                    Text("Total", color = Navy, fontWeight = FontWeight.SemiBold)
-                    Text(formatMoney(totalPrice), color = Navy, fontWeight = FontWeight.Bold)
+                    Text(if (ticketMode == "sale") "Add Item To Ticket" else "Add Item To Service Ticket")
+                }
+                if (ticketMode == "service") {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = onAddScannedItemToWorkOrder,
+                        enabled = selected != null,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                    ) {
+                        Text("Quick Add Current Item")
+                    }
+                }
+                if (ticketItems.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Ticket Cart", color = TextMuted)
+                    ticketItems.forEach { item ->
+                        SimpleListTile(
+                            title = "${item.title} x${item.qty}",
+                            subtitle = item.subtitle,
+                            trailing = "Remove",
+                            onClick = { onRemoveTicketItem(item.stockId) }
+                        )
+                    }
                 }
             }
-        }
 
-        SectionCard("Payment", "Fast payment block for the cashier.") {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                PaymentChip("Cash", payMethod == "Cash") { onPayMethodChange("Cash") }
-                PaymentChip("Bank", payMethod == "Bank") { onPayMethodChange("Bank") }
-                PaymentChip("Credit", payMethod == "Credit") { onPayMethodChange("Credit") }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = Color.White,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Border),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showPaidAmountPad = !showPaidAmountPad }
-            ) {
-                Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                    Text("Paid Amount", color = TextMuted, style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        if (paidAmount.isBlank()) "Tap to enter amount" else paidAmount,
-                        color = if (paidAmount.isBlank()) TextMuted else TextPrimary,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = if (paidAmount.isBlank()) FontWeight.Normal else FontWeight.SemiBold
+            SectionCard("Payment", "Fast payment block for the cashier.") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    PaymentChip("Cash", payMethod == "Cash") { onPayMethodChange("Cash") }
+                    PaymentChip("Bank", payMethod == "Bank") { onPayMethodChange("Bank") }
+                    PaymentChip("Credit", payMethod == "Credit") { onPayMethodChange("Credit") }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color.White,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Border),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showPaidAmountPad = !showPaidAmountPad }
+                ) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        Text("Paid Amount", color = TextMuted, style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            if (paidAmount.isBlank()) "Tap to enter amount" else paidAmount,
+                            color = if (paidAmount.isBlank()) TextMuted else TextPrimary,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (paidAmount.isBlank()) FontWeight.Normal else FontWeight.SemiBold
+                        )
+                    }
+                }
+                if (showPaidAmountPad) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    NumberPad(
+                        value = paidAmount,
+                        onValueChange = onPaidAmountChange,
+                        onDone = { showPaidAmountPad = false }
                     )
                 }
-            }
-            if (showPaidAmountPad) {
                 Spacer(modifier = Modifier.height(10.dp))
-                NumberPad(
-                    value = paidAmount,
-                    onValueChange = onPaidAmountChange,
-                    onDone = { showPaidAmountPad = false }
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (dueAmount > 0.0) Color(0xFFFFF3E0) else BlueSoft,
-                border = androidx.compose.foundation.BorderStroke(1.dp, if (dueAmount > 0.0) Color(0xFFFFD08A) else Color(0xFFA7D7B5))
-            ) {
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(if (dueAmount > 0.0) "Balance Due" else "Fully Paid", color = if (dueAmount > 0.0) Danger else Success, fontWeight = FontWeight.Bold)
-                    Text(formatMoney(dueAmount), color = if (dueAmount > 0.0) Danger else Success, fontWeight = FontWeight.ExtraBold)
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (dueAmount > 0.0) Color(0xFFFFF3E0) else BlueSoft,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (dueAmount > 0.0) Color(0xFFFFD08A) else Color(0xFFA7D7B5))
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(if (dueAmount > 0.0) "Balance Due" else "Fully Paid", color = if (dueAmount > 0.0) Danger else Success, fontWeight = FontWeight.Bold)
+                        Text(formatMoney(dueAmount), color = if (dueAmount > 0.0) Danger else Success, fontWeight = FontWeight.ExtraBold)
+                    }
                 }
             }
-        }
 
-        SectionCard("Finish Ticket", "Save now or hold this sale for later.") {
-            DraftField("Notes", notes, onNotesChange)
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                Button(onClick = onHold, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Warning)) {
-                    Text("Hold")
-                }
-                Button(onClick = onCompleteSale, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Navy)) {
-                    Text("Complete Sale")
+            SectionCard("Finish Ticket", "Save now or hold this sale for later.") {
+                DraftField("Notes", notes, onNotesChange)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = onHold, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Warning)) {
+                        Text(if (ticketMode == "sale") "Hold" else "Save WO")
+                    }
+                    Button(onClick = onCompleteSale, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Navy)) {
+                        Text(if (ticketMode == "sale") "Complete Sale" else "Checkout Service")
+                    }
                 }
             }
-        }
 
-        LookupSummaryCard(lookup = lookup, showTemplate = false)
+            LookupSummaryCard(lookup = lookup, showTemplate = false)
+        }
     }
 }
 
@@ -1340,6 +2093,192 @@ private fun InventoryIntakePanel(
 }
 
 @Composable
+private fun VehicleRegistryPanel(
+    vehicles: List<MobileVehicleSummary>,
+    customerQuery: String,
+    customers: List<MobileCustomerSummary>,
+    selectedCustomerId: Int?,
+    showNewVehicleForm: Boolean,
+    editingVehicleId: Int?,
+    vehicleIsActive: Int,
+    vehiclePlateNo: String,
+    vehicleMake: String,
+    vehicleModel: String,
+    vehicleYearModel: String,
+    vehicleColor: String,
+    vehicleEngineNo: String,
+    vehicleChassisNo: String,
+    vehicleOdoReading: String,
+    vehicleNotes: String,
+    loading: Boolean,
+    onCustomerQueryChange: (String) -> Unit,
+    onPickCustomer: (MobileCustomerSummary) -> Unit,
+    onToggleVehicleForm: () -> Unit,
+    onVehiclePlateChange: (String) -> Unit,
+    onVehicleMakeChange: (String) -> Unit,
+    onVehicleModelChange: (String) -> Unit,
+    onVehicleYearChange: (String) -> Unit,
+    onVehicleColorChange: (String) -> Unit,
+    onVehicleEngineChange: (String) -> Unit,
+    onVehicleChassisChange: (String) -> Unit,
+    onVehicleOdoChange: (String) -> Unit,
+    onVehicleNotesChange: (String) -> Unit,
+    onEditVehicle: (MobileVehicleSummary) -> Unit,
+    onSaveVehicle: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        SectionCard("Vehicle Registry", "Register customer vehicles that can be attached to service tickets and work orders.") {
+            DraftField("Search customer", customerQuery, onCustomerQueryChange)
+            if (customerQuery.isNotBlank() && customerQuery.lowercase() != "walk-in customer") {
+                Spacer(modifier = Modifier.height(8.dp))
+                customers.forEach { customer ->
+                    SimpleListTile(
+                        title = customer.name,
+                        subtitle = listOf(customer.phone, customer.address).filter { it.isNotBlank() }.joinToString("  "),
+                        trailing = if (selectedCustomerId == customer.id) "Selected" else "Use",
+                        onClick = { onPickCustomer(customer) }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onToggleVehicleForm,
+                enabled = selectedCustomerId != null,
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Blue)
+            ) {
+                Text(if (showNewVehicleForm) "Cancel Vehicle Form" else if (editingVehicleId == null) "Add Vehicle" else "Edit Vehicle")
+            }
+            if (showNewVehicleForm) {
+                Spacer(modifier = Modifier.height(12.dp))
+                DraftField("Plate Number", vehiclePlateNo, onVehiclePlateChange)
+                DraftField("Make", vehicleMake, onVehicleMakeChange)
+                DraftField("Model", vehicleModel, onVehicleModelChange)
+                DraftField("Year Model", vehicleYearModel, onVehicleYearChange)
+                DraftField("Color", vehicleColor, onVehicleColorChange)
+                DraftField("Engine No", vehicleEngineNo, onVehicleEngineChange)
+                DraftField("Chassis No", vehicleChassisNo, onVehicleChassisChange)
+                DraftField("Odo Reading", vehicleOdoReading, onVehicleOdoChange)
+                DraftField("Notes", vehicleNotes, onVehicleNotesChange)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Status: ${if (vehicleIsActive == 1) "Active" else "Inactive"}", color = TextMuted)
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(
+                    onClick = onSaveVehicle,
+                    enabled = !loading && selectedCustomerId != null && vehiclePlateNo.isNotBlank() && vehicleMake.isNotBlank() && vehicleModel.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Navy)
+                ) {
+                    Text(if (loading) "Saving Vehicle..." else if (editingVehicleId == null) "Save Vehicle" else "Update Vehicle")
+                }
+            }
+        }
+        SectionCard("All Vehicles", "Existing vehicle records from Google Sheets.") {
+            vehicles.take(20).forEach { vehicle ->
+                SimpleListTile(
+                    title = vehicle.label,
+                    subtitle = "${vehicle.customerName} • ${vehicle.yearModel.ifBlank { "No year" }}",
+                    trailing = "Edit",
+                    onClick = { onEditVehicle(vehicle) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkOrdersPanel(
+    workOrders: List<MobileWorkOrderSummary>,
+    customerQuery: String,
+    customers: List<MobileCustomerSummary>,
+    vehicleQuery: String,
+    vehicles: List<MobileVehicleType>,
+    selectedCustomerId: Int?,
+    selectedVehicleId: Int?,
+    editingWorkOrderId: Int?,
+    complaint: String,
+    diagnosis: String,
+    priority: String,
+    notes: String,
+    loading: Boolean,
+    onCustomerQueryChange: (String) -> Unit,
+    onPickCustomer: (MobileCustomerSummary) -> Unit,
+    onVehicleQueryChange: (String) -> Unit,
+    onPickVehicle: (MobileVehicleType) -> Unit,
+    onEditWorkOrder: (MobileWorkOrderSummary) -> Unit,
+    onComplaintChange: (String) -> Unit,
+    onDiagnosisChange: (String) -> Unit,
+    onPriorityChange: (String) -> Unit,
+    onNotesChange: (String) -> Unit,
+    onSaveWorkOrder: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        SectionCard("Create Work Order", "Start a repair/service job from the phone and sync it to the shared sheet.") {
+            DraftField("Search customer", customerQuery, onCustomerQueryChange)
+            if (customerQuery.isNotBlank() && customerQuery.lowercase() != "walk-in customer") {
+                Spacer(modifier = Modifier.height(8.dp))
+                customers.forEach { customer ->
+                    SimpleListTile(
+                        title = customer.name,
+                        subtitle = listOf(customer.phone, customer.address).filter { it.isNotBlank() }.joinToString("  "),
+                        trailing = if (selectedCustomerId == customer.id) "Selected" else "Use",
+                        onClick = { onPickCustomer(customer) }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            DraftField("Search vehicle type", vehicleQuery, onVehicleQueryChange)
+            if (vehicleQuery.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                vehicles.forEach { vehicle ->
+                    SimpleListTile(
+                        title = vehicle.label,
+                        subtitle = vehicle.category,
+                        trailing = if (vehicleQuery == vehicle.label) "Selected" else "Use",
+                        onClick = { onPickVehicle(vehicle) }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            DraftField("Complaint", complaint, onComplaintChange)
+            DraftField("Diagnosis", diagnosis, onDiagnosisChange)
+            Text("Priority", color = TextMuted)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                PaymentChip("Low", priority == "low") { onPriorityChange("low") }
+                PaymentChip("Normal", priority == "normal") { onPriorityChange("normal") }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                PaymentChip("High", priority == "high") { onPriorityChange("high") }
+                PaymentChip("Urgent", priority == "urgent") { onPriorityChange("urgent") }
+            }
+            DraftField("Notes", notes, onNotesChange)
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = onSaveWorkOrder,
+                enabled = !loading && selectedCustomerId != null && vehicleQuery.isNotBlank() && complaint.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Navy)
+            ) {
+                Text(if (loading) "Saving Work Order..." else if (editingWorkOrderId == null) "Save Work Order" else "Update Work Order")
+            }
+        }
+        SectionCard("Open Work Orders", "Pending and active repair jobs.") {
+            workOrders.take(20).forEach { workOrder ->
+                SimpleListTile(
+                    title = workOrder.workOrderNo.ifBlank { "Work Order #${workOrder.id}" },
+                    subtitle = "${workOrder.customerName} • ${workOrder.vehicleLabel} • ${workOrder.status}",
+                    trailing = "Edit",
+                    onClick = { onEditWorkOrder(workOrder) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ReceiptsPanel(
     receipts: List<MobileSaleSummary>,
     detail: MobileSaleDetail?,
@@ -1402,6 +2341,63 @@ private fun CameraPanel(
                     modifier = Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(18.dp)),
                     onBarcodeDetected = onBarcodeDetected
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullScreenScannerOverlay(
+    cameraAllowed: Boolean,
+    onClose: () -> Unit,
+    onBarcodeDetected: (String) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = NavyDark.copy(alpha = 0.98f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Scan Barcode", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = onClose,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Navy)
+                ) {
+                    Text("Close")
+                }
+            }
+            Text(
+                "Point the camera at the barcode. After a successful scan, this screen will close automatically.",
+                color = Color.White.copy(alpha = 0.82f)
+            )
+            Surface(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                shape = RoundedCornerShape(24.dp),
+                color = Color.White.copy(alpha = 0.06f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
+            ) {
+                if (!cameraAllowed) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Camera permission is required to scan.", color = Color.White)
+                    }
+                } else {
+                    BarcodeScannerView(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(24.dp)),
+                        onBarcodeDetected = onBarcodeDetected
+                    )
+                }
             }
         }
     }
@@ -1664,6 +2660,8 @@ private fun screenTitle(key: String): String {
     return when (key) {
         "pos" -> "Ticket"
         "inventory" -> "All Items"
+        "workorders" -> "Work Orders"
+        "vehicles" -> "Vehicle Registry"
         "receipts" -> "Receipts"
         "about" -> "About"
         else -> "Sales"

@@ -26,6 +26,7 @@
         android:extractNativeLibs="false"
         android:label="Motor Shop POS"
         android:supportsRtl="true"
+        android:testOnly="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar" >
         <activity
             android:name="com.grandtips.motoposmobile.MainActivity"

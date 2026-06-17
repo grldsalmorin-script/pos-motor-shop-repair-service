@@ -7,10 +7,16 @@ import com.grandtips.motoposmobile.model.InventorySaveResult
 import com.grandtips.motoposmobile.model.MobileCustomerSummary
 import com.grandtips.motoposmobile.model.MobileInventoryLookup
 import com.grandtips.motoposmobile.model.MobileSaleDetail
+import com.grandtips.motoposmobile.model.MobileCheckoutItem
 import com.grandtips.motoposmobile.model.MobileSaleResult
 import com.grandtips.motoposmobile.model.MobileSaleSummary
 import com.grandtips.motoposmobile.model.MobileSession
 import com.grandtips.motoposmobile.model.InventoryStock
+import com.grandtips.motoposmobile.model.MobileVehicleSaveResult
+import com.grandtips.motoposmobile.model.MobileVehicleSummary
+import com.grandtips.motoposmobile.model.MobileVehicleType
+import com.grandtips.motoposmobile.model.MobileWorkOrderSaveResult
+import com.grandtips.motoposmobile.model.MobileWorkOrderSummary
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -101,25 +107,40 @@ class AppsScriptRepository(private val api: MobileApiRepository) {
 
     suspend fun submitMobileSale(
         token: String,
-        stockId: Int,
-        qty: Int,
+        items: List<MobileCheckoutItem>,
         customerName: String,
         paidAmount: String,
         paymentMethod: String,
         notes: String,
         status: String
     ): Result<MobileSaleResult> = runCatching {
-        val payload = mapOf(
+        val payload = mutableMapOf<String, Any>(
             "route" to "mobile/pos/checkout",
             "token" to token,
-            "stock_id" to stockId,
-            "qty" to qty,
             "customer_name" to customerName,
             "paid_amount" to paidAmount,
             "payment_method" to paymentMethod.lowercase(),
             "notes" to notes,
             "status" to status
         )
+        if (items.size == 1) {
+            val item = items.first()
+            payload["stock_id"] = item.woodStockId
+            payload["qty"] = item.qty
+            payload["rate"] = item.rate
+        }
+        payload["items"] = items.map {
+            mapOf(
+                "wood_stock_id" to it.woodStockId,
+                "serial" to it.serial,
+                "qty" to it.qty,
+                "rate" to it.rate,
+                "width" to it.width,
+                "length" to it.length,
+                "cft" to it.cft,
+                "line_total" to it.lineTotal
+            )
+        }
         val raw = api.postRoute(BuildConfig.APPS_SCRIPT_URL, payload)
         if (!raw.success || raw.data == null) error(raw.message ?: "Sale submission failed")
         GsonHolder.gson.fromJson(GsonHolder.gson.toJson(raw.data), MobileSaleResult::class.java)
@@ -176,6 +197,203 @@ class AppsScriptRepository(private val api: MobileApiRepository) {
         val raw = api.postRoute(BuildConfig.APPS_SCRIPT_URL, mapOf("route" to "mobile/sales/detail", "token" to token, "sale_id" to saleId))
         if (!raw.success || raw.data == null) error(raw.message ?: "Sale detail failed")
         GsonHolder.gson.fromJson(GsonHolder.gson.toJson(raw.data), MobileSaleDetail::class.java)
+    }
+
+    suspend fun getVehicles(token: String): Result<List<MobileVehicleSummary>> = runCatching {
+        val raw = api.postRoute(BuildConfig.APPS_SCRIPT_URL, mapOf("route" to "mobile/vehicles/list", "token" to token))
+        if (!raw.success || raw.data == null) error(raw.message ?: "Vehicle load failed")
+        GsonHolder.gson.fromJson(
+            GsonHolder.gson.toJson(raw.data),
+            com.google.gson.reflect.TypeToken.getParameterized(List::class.java, MobileVehicleSummary::class.java).type
+        )
+    }
+
+    suspend fun getVehicleTypes(token: String): Result<List<MobileVehicleType>> = runCatching {
+        val raw = api.postRoute(BuildConfig.APPS_SCRIPT_URL, mapOf("route" to "mobile/vehicle-types/list", "token" to token))
+        if (!raw.success || raw.data == null) error(raw.message ?: "Vehicle types load failed")
+        GsonHolder.gson.fromJson(
+            GsonHolder.gson.toJson(raw.data),
+            com.google.gson.reflect.TypeToken.getParameterized(List::class.java, MobileVehicleType::class.java).type
+        )
+    }
+
+    suspend fun addVehicle(
+        token: String,
+        customerId: Int,
+        plateNo: String,
+        vehicleMake: String,
+        vehicleModel: String,
+        yearModel: String,
+        color: String,
+        engineNo: String,
+        chassisNo: String,
+        odoReading: String,
+        notes: String
+    ): Result<MobileVehicleSaveResult> = runCatching {
+        val raw = api.postRoute(
+            BuildConfig.APPS_SCRIPT_URL,
+            mapOf(
+                "route" to "mobile/vehicles/create",
+                "token" to token,
+                "customer_id" to customerId,
+                "plate_no" to plateNo,
+                "vehicle_make" to vehicleMake,
+                "vehicle_model" to vehicleModel,
+                "year_model" to yearModel,
+                "color" to color,
+                "engine_no" to engineNo,
+                "chassis_no" to chassisNo,
+                "odo_reading" to odoReading,
+                "notes" to notes
+            )
+        )
+        if (!raw.success || raw.data == null) error(raw.message ?: "Vehicle create failed")
+        GsonHolder.gson.fromJson(GsonHolder.gson.toJson(raw.data), MobileVehicleSaveResult::class.java)
+    }
+
+    suspend fun updateVehicle(
+        token: String,
+        id: Int,
+        customerId: Int,
+        plateNo: String,
+        vehicleMake: String,
+        vehicleModel: String,
+        yearModel: String,
+        color: String,
+        engineNo: String,
+        chassisNo: String,
+        odoReading: String,
+        notes: String,
+        isActive: Int
+    ): Result<MobileVehicleSaveResult> = runCatching {
+        val raw = api.postRoute(
+            BuildConfig.APPS_SCRIPT_URL,
+            mapOf(
+                "route" to "mobile/vehicles/update",
+                "token" to token,
+                "id" to id,
+                "customer_id" to customerId,
+                "plate_no" to plateNo,
+                "vehicle_make" to vehicleMake,
+                "vehicle_model" to vehicleModel,
+                "year_model" to yearModel,
+                "color" to color,
+                "engine_no" to engineNo,
+                "chassis_no" to chassisNo,
+                "odo_reading" to odoReading,
+                "notes" to notes,
+                "is_active" to isActive
+            )
+        )
+        if (!raw.success || raw.data == null) error(raw.message ?: "Vehicle update failed")
+        GsonHolder.gson.fromJson(GsonHolder.gson.toJson(raw.data), MobileVehicleSaveResult::class.java)
+    }
+
+    suspend fun getWorkOrders(token: String): Result<List<MobileWorkOrderSummary>> = runCatching {
+        val raw = api.postRoute(BuildConfig.APPS_SCRIPT_URL, mapOf("route" to "mobile/work-orders/list", "token" to token))
+        if (!raw.success || raw.data == null) error(raw.message ?: "Work orders load failed")
+        GsonHolder.gson.fromJson(
+            GsonHolder.gson.toJson(raw.data),
+            com.google.gson.reflect.TypeToken.getParameterized(List::class.java, MobileWorkOrderSummary::class.java).type
+        )
+    }
+
+    suspend fun createWorkOrder(
+        token: String,
+        customerId: Int,
+        vehicleId: Int,
+        complaint: String,
+        diagnosis: String,
+        priority: String,
+        notes: String
+    ): Result<MobileWorkOrderSaveResult> = runCatching {
+        val raw = api.postRoute(
+            BuildConfig.APPS_SCRIPT_URL,
+            mapOf(
+                "route" to "mobile/work-orders/create",
+                "token" to token,
+                "customer_id" to customerId,
+                "vehicle_id" to vehicleId,
+                "complaint" to complaint,
+                "diagnosis" to diagnosis,
+                "priority" to priority,
+                "notes" to notes
+            )
+        )
+        if (!raw.success || raw.data == null) error(raw.message ?: "Work order create failed")
+        GsonHolder.gson.fromJson(GsonHolder.gson.toJson(raw.data), MobileWorkOrderSaveResult::class.java)
+    }
+
+    suspend fun updateWorkOrder(
+        token: String,
+        id: Int,
+        customerId: Int,
+        vehicleId: Int,
+        complaint: String,
+        diagnosis: String,
+        priority: String,
+        notes: String
+    ): Result<MobileWorkOrderSaveResult> = runCatching {
+        val raw = api.postRoute(
+            BuildConfig.APPS_SCRIPT_URL,
+            mapOf(
+                "route" to "mobile/work-orders/update",
+                "token" to token,
+                "id" to id,
+                "customer_id" to customerId,
+                "vehicle_id" to vehicleId,
+                "complaint" to complaint,
+                "diagnosis" to diagnosis,
+                "priority" to priority,
+                "notes" to notes
+            )
+        )
+        if (!raw.success || raw.data == null) error(raw.message ?: "Work order update failed")
+        GsonHolder.gson.fromJson(GsonHolder.gson.toJson(raw.data), MobileWorkOrderSaveResult::class.java)
+    }
+
+    suspend fun addWorkOrderItem(
+        token: String,
+        workOrderId: Int,
+        stockId: Int,
+        qty: Int,
+        notes: String
+    ): Result<MobileWorkOrderSaveResult> = runCatching {
+        val raw = api.postRoute(
+            BuildConfig.APPS_SCRIPT_URL,
+            mapOf(
+                "route" to "mobile/work-orders/add-item",
+                "token" to token,
+                "work_order_id" to workOrderId,
+                "wood_stock_id" to stockId,
+                "qty" to qty,
+                "notes" to notes
+            )
+        )
+        if (!raw.success || raw.data == null) error(raw.message ?: "Work order item add failed")
+        GsonHolder.gson.fromJson(GsonHolder.gson.toJson(raw.data), MobileWorkOrderSaveResult::class.java)
+    }
+
+    suspend fun checkoutWorkOrder(
+        token: String,
+        workOrderId: Int,
+        paidAmount: String,
+        paymentMethod: String,
+        notes: String
+    ): Result<MobileSaleResult> = runCatching {
+        val raw = api.postRoute(
+            BuildConfig.APPS_SCRIPT_URL,
+            mapOf(
+                "route" to "mobile/work-orders/checkout",
+                "token" to token,
+                "work_order_id" to workOrderId,
+                "paid_amount" to paidAmount,
+                "payment_method" to paymentMethod.lowercase(),
+                "notes" to notes
+            )
+        )
+        if (!raw.success || raw.data == null) error(raw.message ?: "Work order checkout failed")
+        GsonHolder.gson.fromJson(GsonHolder.gson.toJson(raw.data), MobileSaleResult::class.java)
     }
 
     private suspend fun runLookup(route: String, token: String, barcode: String): Result<MobileInventoryLookup> = runCatching {

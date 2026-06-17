@@ -1,4 +1,4 @@
-const SHEETS = { USERS: 'Users', CATEGORIES: 'Categories', SUB_CATEGORIES: 'Sub_Categories', SUPPLIERS: 'Suppliers', PURCHASES: 'Purchases', WOOD_STOCKS: 'Wood_Stocks', CUSTOMERS: 'Customers', VEHICLES: 'Vehicles', WORK_ORDERS: 'Work_Orders', WORK_ORDER_ITEMS: 'Work_Order_Items', INVENTORY_THRESHOLDS: 'Inventory_Thresholds', BARCODE_TEMPLATES: 'Barcode_Templates', SALES: 'Sales', SALE_ITEMS: 'Sale_Items', PAYMENTS: 'Payments', EXPENSES: 'Expenses', IMPORT_LOGS: 'Import_Logs', SETTINGS: 'Settings', LOGS: 'Activity_Logs' };
+const SHEETS = { USERS: 'Users', CATEGORIES: 'Categories', SUB_CATEGORIES: 'Sub_Categories', SUPPLIERS: 'Suppliers', PURCHASES: 'Purchases', WOOD_STOCKS: 'Wood_Stocks', CUSTOMERS: 'Customers', VEHICLES: 'Vehicles', VEHICLE_TYPES: 'Vehicle_Types', WORK_ORDERS: 'Work_Orders', WORK_ORDER_ITEMS: 'Work_Order_Items', INVENTORY_THRESHOLDS: 'Inventory_Thresholds', BARCODE_TEMPLATES: 'Barcode_Templates', SALES: 'Sales', SALE_ITEMS: 'Sale_Items', PAYMENTS: 'Payments', EXPENSES: 'Expenses', IMPORT_LOGS: 'Import_Logs', SETTINGS: 'Settings', LOGS: 'Activity_Logs' };
 
 // cols: 0=id, 1=full_name, 2=email, 3=phone, 4=pwd, 5=role, 6=avatar, 7=is_active, 8=created_at, 9=updated_at, 10=otp, 11=otp_expires
 const U = { ID: 0, NAME: 1, EMAIL: 2, PHONE: 3, PWD: 4, ROLE: 5, AVATAR: 6, ACTIVE: 7, CREATED: 8, UPDATED: 9, OTP: 10, OTP_EXP: 11 };
@@ -23,6 +23,7 @@ const CU = { ID:0, NAME:1, PHONE:2, ADDR:3, TOTAL:4, PAID:5, DUE:6, ACTIVE:7, CR
 
 // vehicles: 0=id, 1=customer_id, 2=plate_no, 3=make, 4=model, 5=year_model, 6=color, 7=engine_no, 8=chassis_no, 9=odo_reading, 10=notes, 11=is_active, 12=created_by, 13=created_at, 14=updated_at
 const VH = { ID:0, CUSTOMER_ID:1, PLATE:2, MAKE:3, MODEL:4, YEAR:5, COLOR:6, ENGINE:7, CHASSIS:8, ODO:9, NOTES:10, ACTIVE:11, CREATED_BY:12, CREATED:13, UPDATED:14 };
+const VT = { ID:0, BRAND:1, MODEL:2, CATEGORY:3, ACTIVE:4, CREATED_BY:5, CREATED:6 };
 
 // work orders: 0=id, 1=no, 2=customer_id, 3=vehicle_id, 4=complaint, 5=diagnosis, 6=mechanic_id, 7=priority, 8=status, 9=labor_total, 10=parts_total, 11=subtotal, 12=discount, 13=grand_total, 14=paid_amount, 15=due_amount, 16=check_in_at, 17=promised_at, 18=completed_at, 19=released_at, 20=sale_id, 21=notes, 22=created_by, 23=created_at, 24=updated_at
 const WO = { ID:0, NO:1, CUSTOMER_ID:2, VEHICLE_ID:3, COMPLAINT:4, DIAGNOSIS:5, MECHANIC_ID:6, PRIORITY:7, STATUS:8, LABOR:9, PARTS:10, SUBTOTAL:11, DISC:12, TOTAL:13, PAID:14, DUE:15, CHECKIN:16, PROMISED:17, COMPLETED:18, RELEASED:19, SALE_ID:20, NOTES:21, CREATED_BY:22, CREATED:23, UPDATED:24 };
@@ -94,6 +95,24 @@ function doPost(e) {
         return jsonOut_(mobileApiCustomersList_(session.data));
       case 'mobile/customers/create':
         return jsonOut_(mobileApiCustomerCreate_(req, session.data));
+      case 'mobile/vehicles/list':
+        return jsonOut_(mobileApiVehiclesList_(session.data));
+      case 'mobile/vehicle-types/list':
+        return jsonOut_(mobileApiVehicleTypesList_(session.data));
+      case 'mobile/vehicles/create':
+        return jsonOut_(mobileApiVehicleCreate_(req, session.data));
+      case 'mobile/vehicles/update':
+        return jsonOut_(mobileApiVehicleUpdate_(req, session.data));
+      case 'mobile/work-orders/list':
+        return jsonOut_(mobileApiWorkOrdersList_(session.data));
+      case 'mobile/work-orders/create':
+        return jsonOut_(mobileApiWorkOrderCreate_(req, session.data));
+      case 'mobile/work-orders/update':
+        return jsonOut_(mobileApiWorkOrderUpdate_(req, session.data));
+      case 'mobile/work-orders/add-item':
+        return jsonOut_(mobileApiWorkOrderAddItem_(req, session.data));
+      case 'mobile/work-orders/checkout':
+        return jsonOut_(mobileApiWorkOrderCheckout_(req, session.data));
       case 'mobile/inventory/list':
         return jsonOut_(mobileApiInventoryList_(session.data));
       case 'mobile/pos/scan':
@@ -164,14 +183,57 @@ function ensureSheet_(ss, name, headers) {
 function ensurePhase1Sheets_() {
   const ss = getSpreadsheet_();
   ensureSheet_(ss, SHEETS.VEHICLES, ['ID','Customer ID','Plate No','Make','Model','Year Model','Color','Engine No','Chassis No','ODO Reading','Notes','Is Active','Created By','Created At','Updated At']);
+  ensureSheet_(ss, SHEETS.VEHICLE_TYPES, ['ID','Brand','Model','Category','Is Active','Created By','Created At']);
   ensureSheet_(ss, SHEETS.WORK_ORDERS, ['ID','Work Order No','Customer ID','Vehicle ID','Complaint','Diagnosis','Mechanic ID','Priority','Status','Labor Total','Parts Total','Subtotal','Discount','Grand Total','Paid Amount','Due Amount','Check In At','Promised At','Completed At','Released At','Sale ID','Notes','Created By','Created At','Updated At']);
   ensureSheet_(ss, SHEETS.WORK_ORDER_ITEMS, ['ID','Work Order ID','Item Type','Ref ID','Code','Description','Qty','Unit Price','Line Total','Source Stock ID','Notes']);
   ensureSheet_(ss, SHEETS.INVENTORY_THRESHOLDS, ['ID','Wood Stock ID','Min Qty','Reorder Qty','Updated By','Updated At']);
+  ensureVehicleTypeSeed_();
 }
 
 function ensureMobileSheets_() {
   const ss = getSpreadsheet_();
   ensureSheet_(ss, SHEETS.BARCODE_TEMPLATES, ['ID','Barcode','Product Name','Brand','Category ID','Sub Category ID','Description','Default Buy Rate','Default Sell Rate','Default Qty','Last Stock ID','Updated By','Updated At']);
+}
+
+function ensureVehicleTypeSeed_() {
+  const sh = getSheet(SHEETS.VEHICLE_TYPES);
+  if (!sh || sh.getLastRow() > 1) return;
+  const now = ts();
+  const rows = [
+    [1, 'Honda', 'Click 125i', 'Scooter', 1, 1, now],
+    [2, 'Honda', 'Beat FI', 'Scooter', 1, 1, now],
+    [3, 'Honda', 'ADV 160', 'Scooter', 1, 1, now],
+    [4, 'Honda', 'PCX 160', 'Scooter', 1, 1, now],
+    [5, 'Honda', 'Airblade 160', 'Scooter', 1, 1, now],
+    [6, 'Honda', 'Wave RSX', 'Underbone', 1, 1, now],
+    [7, 'Honda', 'TMX 125 Alpha', 'Business Bike', 1, 1, now],
+    [8, 'Yamaha', 'Mio Gear', 'Scooter', 1, 1, now],
+    [9, 'Yamaha', 'Mio i125', 'Scooter', 1, 1, now],
+    [10, 'Yamaha', 'NMAX 155', 'Scooter', 1, 1, now],
+    [11, 'Yamaha', 'Aerox 155', 'Scooter', 1, 1, now],
+    [12, 'Yamaha', 'Sniper 155', 'Underbone', 1, 1, now],
+    [13, 'Yamaha', 'XSR 155', 'Manual', 1, 1, now],
+    [14, 'Yamaha', 'YTX 125', 'Business Bike', 1, 1, now],
+    [15, 'Suzuki', 'Raider R150 FI', 'Underbone', 1, 1, now],
+    [16, 'Suzuki', 'Burgman Street 125', 'Scooter', 1, 1, now],
+    [17, 'Suzuki', 'Smash FI', 'Underbone', 1, 1, now],
+    [18, 'Suzuki', 'Skydrive Sport', 'Scooter', 1, 1, now],
+    [19, 'Kawasaki', 'Barako III 175', 'Business Bike', 1, 1, now],
+    [20, 'Kawasaki', 'CT100B', 'Business Bike', 1, 1, now],
+    [21, 'Kawasaki', 'Rouser NS125', 'Manual', 1, 1, now],
+    [22, 'Kawasaki', 'Rouser NS160', 'Manual', 1, 1, now],
+    [23, 'Kawasaki', 'Dominar 400', 'Manual', 1, 1, now],
+    [24, 'Kymco', 'Like 125 Italia', 'Scooter', 1, 1, now],
+    [25, 'Kymco', 'Super 8 150', 'Scooter', 1, 1, now],
+    [26, 'TVS', 'XL100', 'Business Bike', 1, 1, now],
+    [27, 'TVS', 'Apache RTR 160', 'Manual', 1, 1, now],
+    [28, 'MotorStar', 'Xplorer Z200', 'Manual', 1, 1, now],
+    [29, 'MotorStar', 'Easyride 150N', 'Scooter', 1, 1, now],
+    [30, 'RUSI', 'Classic 250', 'Manual', 1, 1, now],
+    [31, 'RUSI', 'Flash 150', 'Scooter', 1, 1, now],
+    [32, 'RUSI', 'Mojo 200', 'Manual', 1, 1, now]
+  ];
+  rows.forEach(function(row) { sh.appendRow(row); });
 }
 
 function getSheetData(name) {
@@ -511,6 +573,171 @@ function mobileApiCustomerCreate_(req, session) {
   }
 }
 
+function mobileApiVehiclesList_(session) {
+  try {
+    const r = getVehicles(session.id, session.role);
+    if (!r.success) return r;
+    return { success: true, data: r.data || [] };
+  } catch (e) {
+    console.error('mobileApiVehiclesList_:', e);
+    return { success: false, message: 'Failed to load vehicles' };
+  }
+}
+
+function mobileApiVehicleTypesList_(session) {
+  try {
+    if (session.role === 'warehouse_staff') return { success: false, message: 'Access denied' };
+    ensurePhase1Sheets_();
+    const rows = getSheetData(SHEETS.VEHICLE_TYPES)
+      .filter(r => isActive(r[VT.ACTIVE]))
+      .map(r => ({
+        id: r[VT.ID],
+        brand: r[VT.BRAND] || '',
+        model: r[VT.MODEL] || '',
+        category: r[VT.CATEGORY] || '',
+        label: [r[VT.BRAND] || '', r[VT.MODEL] || ''].filter(Boolean).join(' • ')
+      }));
+    return { success: true, data: rows };
+  } catch (e) {
+    console.error('mobileApiVehicleTypesList_:', e);
+    return { success: false, message: 'Failed to load vehicle types' };
+  }
+}
+
+function mobileApiVehicleCreate_(req, session) {
+  try {
+    const r = addVehicle({
+      customer_id: req.customer_id,
+      plate_no: req.plate_no,
+      vehicle_make: req.vehicle_make,
+      vehicle_model: req.vehicle_model,
+      year_model: req.year_model,
+      color: req.color,
+      engine_no: req.engine_no,
+      chassis_no: req.chassis_no,
+      odo_reading: req.odo_reading,
+      notes: req.notes
+    }, session.id, session.role);
+    if (!r.success) return r;
+    return { success: true, message: r.message || 'Vehicle added', data: r.data };
+  } catch (e) {
+    console.error('mobileApiVehicleCreate_:', e);
+    return { success: false, message: 'Failed to create vehicle' };
+  }
+}
+
+function mobileApiVehicleUpdate_(req, session) {
+  try {
+    const r = updateVehicle({
+      id: req.id,
+      customer_id: req.customer_id,
+      plate_no: req.plate_no,
+      vehicle_make: req.vehicle_make,
+      vehicle_model: req.vehicle_model,
+      year_model: req.year_model,
+      color: req.color,
+      engine_no: req.engine_no,
+      chassis_no: req.chassis_no,
+      odo_reading: req.odo_reading,
+      notes: req.notes,
+      is_active: req.is_active
+    }, session.id, session.role);
+    if (!r.success) return r;
+    return { success: true, message: r.message || 'Vehicle updated', data: { id: parseInt(req.id) || 0 } };
+  } catch (e) {
+    console.error('mobileApiVehicleUpdate_:', e);
+    return { success: false, message: 'Failed to update vehicle' };
+  }
+}
+
+function mobileApiWorkOrdersList_(session) {
+  try {
+    const r = getWorkOrders(session.id, session.role);
+    if (!r.success) return r;
+    return { success: true, data: r.data || [] };
+  } catch (e) {
+    console.error('mobileApiWorkOrdersList_:', e);
+    return { success: false, message: 'Failed to load work orders' };
+  }
+}
+
+function mobileApiWorkOrderCreate_(req, session) {
+  try {
+    const r = createWorkOrder({
+      customer_id: req.customer_id,
+      vehicle_id: req.vehicle_id,
+      complaint: req.complaint,
+      diagnosis: req.diagnosis,
+      priority: req.priority,
+      notes: req.notes
+    }, session.id, session.role);
+    if (!r.success) return r;
+    return { success: true, message: r.message || 'Work order created', data: r.data };
+  } catch (e) {
+    console.error('mobileApiWorkOrderCreate_:', e);
+    return { success: false, message: 'Failed to create work order' };
+  }
+}
+
+function mobileApiWorkOrderUpdate_(req, session) {
+  try {
+    const r = updateWorkOrder({
+      id: req.id,
+      customer_id: req.customer_id,
+      vehicle_id: req.vehicle_id,
+      complaint: req.complaint,
+      diagnosis: req.diagnosis,
+      priority: req.priority,
+      notes: req.notes,
+      discount: req.discount,
+      promised_at: req.promised_at,
+      mechanic_id: req.mechanic_id
+    }, session.id, session.role);
+    if (!r.success) return r;
+    return { success: true, message: r.message || 'Work order updated', data: { id: parseInt(req.id) || 0 } };
+  } catch (e) {
+    console.error('mobileApiWorkOrderUpdate_:', e);
+    return { success: false, message: 'Failed to update work order' };
+  }
+}
+
+function mobileApiWorkOrderAddItem_(req, session) {
+  try {
+    const r = addWorkOrderItem({
+      work_order_id: req.work_order_id,
+      wood_stock_id: req.wood_stock_id,
+      qty: req.qty,
+      notes: req.notes
+    }, session.id, session.role);
+    if (!r.success) return r;
+    return { success: true, message: r.message || 'Work-order item added', data: { id: parseInt(req.work_order_id) || 0 } };
+  } catch (e) {
+    console.error('mobileApiWorkOrderAddItem_:', e);
+    return { success: false, message: 'Failed to add work-order item' };
+  }
+}
+
+function mobileApiWorkOrderCheckout_(req, session) {
+  try {
+    const r = checkoutWorkOrder(
+      req.work_order_id,
+      {
+        paid_amount: req.paid_amount,
+        payment_method: req.payment_method,
+        payment_reference: req.payment_reference || '',
+        notes: req.notes || ''
+      },
+      session.id,
+      session.role
+    );
+    if (!r.success) return r;
+    return { success: true, message: r.message || 'Work order checked out', data: r.data };
+  } catch (e) {
+    console.error('mobileApiWorkOrderCheckout_:', e);
+    return { success: false, message: 'Failed to checkout work order' };
+  }
+}
+
 function mobileApiInventoryList_(session) {
   try {
     const r = getWoodStocks(session.id, session.role);
@@ -526,6 +753,9 @@ function mobileApiInventoryList_(session) {
         qty: item.qty || 0,
         sell_price: item.sell_price || 0,
         sell_rate: item.sell_rate || 0,
+        width: item.width || 0,
+        length: item.length || 0,
+        cft: item.cft || 0,
         image: item.image || '',
         notes: item.notes || '',
         status: item.status || 'available'
@@ -747,23 +977,46 @@ function mobileApiPosScan_(req, session) {
 function mobileApiPosCheckout_(req, session) {
   try {
     if (session.role === 'mechanic' || session.role === 'warehouse_staff') return { success: false, message: 'Access denied' };
-    const stockId = parseInt(req.stock_id);
-    if (!stockId) return { success: false, message: 'Inventory stock ID required' };
-    const qty = Math.max(1, parseInt(req.qty) || 1);
-    const wr = findRowByValue(SHEETS.WOOD_STOCKS, WS.ID, stockId);
-    if (!wr) return { success: false, message: 'Inventory item not found' };
-    const row = wr.data;
-    if (row[WS.STATUS] !== 'available') return { success: false, message: 'Selected item is not available' };
-    const stockQty = parseInt(row[WS.QTY]) || 1;
-    if (qty > stockQty) return { success: false, message: 'Requested quantity exceeds available stock' };
-    const rate = parseFloat(req.rate) || parseFloat(row[WS.SELL_RATE]) || 0;
-    const cft = parseFloat(row[WS.CFT]) || 0;
-    const lineTotal = Math.round(cft * qty * rate * 100) / 100;
-    const paid = Math.max(0, parseFloat(req.paid_amount) || 0);
-    const notes = [req.notes || '', req.customer_name ? ('Customer: ' + req.customer_name) : ''].filter(Boolean).join(' | ');
-    return completeSale({
-      customer_id: '',
-      items: [{
+    const rawItems = Array.isArray(req.items) ? req.items : [];
+    let saleItems = [];
+    if (rawItems.length) {
+      saleItems = rawItems.map(function(item) {
+        const stockId = parseInt(item.wood_stock_id);
+        const qty = Math.max(1, parseInt(item.qty) || 1);
+        const wr = findRowByValue(SHEETS.WOOD_STOCKS, WS.ID, stockId);
+        if (!wr) throw new Error('Inventory item not found');
+        const row = wr.data;
+        if (row[WS.STATUS] !== 'available') throw new Error('Selected item is not available');
+        const stockQty = parseInt(row[WS.QTY]) || 1;
+        if (qty > stockQty) throw new Error('Requested quantity exceeds available stock');
+        const rate = parseFloat(item.rate) || parseFloat(row[WS.SELL_RATE]) || 0;
+        const cft = parseFloat(item.cft) || parseFloat(row[WS.CFT]) || 0;
+        const lineTotal = parseFloat(item.line_total) || Math.round(cft * qty * rate * 100) / 100;
+        return {
+          wood_stock_id: stockId,
+          serial: item.serial || row[WS.SERIAL],
+          width: parseFloat(item.width) || parseFloat(row[WS.WIDTH]) || 0,
+          length: parseFloat(item.length) || parseFloat(row[WS.LENGTH]) || 0,
+          cft: cft,
+          qty: qty,
+          rate: rate,
+          line_total: lineTotal
+        };
+      });
+    } else {
+      const stockId = parseInt(req.stock_id);
+      if (!stockId) return { success: false, message: 'Inventory stock ID required' };
+      const qty = Math.max(1, parseInt(req.qty) || 1);
+      const wr = findRowByValue(SHEETS.WOOD_STOCKS, WS.ID, stockId);
+      if (!wr) return { success: false, message: 'Inventory item not found' };
+      const row = wr.data;
+      if (row[WS.STATUS] !== 'available') return { success: false, message: 'Selected item is not available' };
+      const stockQty = parseInt(row[WS.QTY]) || 1;
+      if (qty > stockQty) return { success: false, message: 'Requested quantity exceeds available stock' };
+      const rate = parseFloat(req.rate) || parseFloat(row[WS.SELL_RATE]) || 0;
+      const cft = parseFloat(row[WS.CFT]) || 0;
+      const lineTotal = Math.round(cft * qty * rate * 100) / 100;
+      saleItems = [{
         wood_stock_id: stockId,
         serial: row[WS.SERIAL],
         width: parseFloat(row[WS.WIDTH]) || 0,
@@ -772,7 +1025,13 @@ function mobileApiPosCheckout_(req, session) {
         qty: qty,
         rate: rate,
         line_total: lineTotal
-      }],
+      }];
+    }
+    const paid = Math.max(0, parseFloat(req.paid_amount) || 0);
+    const notes = [req.notes || '', req.customer_name ? ('Customer: ' + req.customer_name) : ''].filter(Boolean).join(' | ');
+    return completeSale({
+      customer_id: '',
+      items: saleItems,
       discount: parseFloat(req.discount) || 0,
       paid_amount: paid,
       payment_method: req.payment_method || 'cash',
@@ -4448,6 +4707,12 @@ function setupDemoData() {
   sh.appendRow([2, 2, '6712-MIO', 'Yamaha', 'Mio Gear', '2022', 'Blue', 'ENG-YMIO-002', 'CHS-YMIO-002', 22880, 'Delivery-use scooter with frequent brake maintenance', 1, 1, now, now]);
   sh.appendRow([3, 3, '9081-KBK', 'Kawasaki', 'Barako 175', '2021', 'Red', 'ENG-KB175-003', 'CHS-KB175-003', 31890, 'Heavy-use business motorcycle', 1, 2, now, now]);
   sh.appendRow([4, 4, '5507-SRD', 'Suzuki', 'Raider 150', '2024', 'White', 'ENG-SR150-004', 'CHS-SR150-004', 8240, 'Performance tune-up customer', 1, 2, now, now]);
+
+  // Vehicle Types
+  sh = ss.insertSheet(SHEETS.VEHICLE_TYPES);
+  sh.appendRow(['ID','Brand','Model','Category','Is Active','Created By','Created At']);
+  sh.getRange(1, 1, 1, 7).setFontWeight('bold').setBackground('#001f3f').setFontColor('white');
+  ensureVehicleTypeSeed_();
 
   // Purchases
   sh = ss.insertSheet(SHEETS.PURCHASES);
