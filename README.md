@@ -1,8 +1,6 @@
-<<<<<<< HEAD
-# pos-motor-shop-repair-service
+
 Motor Shop and Repair Service POS
 =======
-# Motor Shop & Repair POS
 
 Google Apps Script POS system for a motor shop and repair shop, with an Android mobile client that shares the same Google Sheets database.
 
@@ -201,4 +199,3 @@ Before pushing this repo publicly:
 - mobile work order creation/editing
 - mobile image upload for inventory items
 - receipt printing / PDF export
->>>>>>> 3cc6fad (Initial commit: motor shop repair POS with Android app)
